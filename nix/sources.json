@@ -8,7 +8,7 @@
     "rev": "b3c99d7f13df89a9a918c835ecb7114098912962",
     "sha256": "1i5vg92s6g9zh0i35dm4a6hax7mdsqxbw8w2x63j0y6w57msv70g",
     "type": "tarball",
-    "url": "https://github.com/input-output-hk/hackage.nix/archive/9f61382fad98e24fe8678db2ffb0c51a863a6023.tar.gz",
+    "url": "https://github.com/input-output-hk/hackage.nix/archive/0d5a13378159f6574e9b3e28b65fc0f2dd4a91e4.tar.gz",
     "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
   },
   "haskell.nix": {
