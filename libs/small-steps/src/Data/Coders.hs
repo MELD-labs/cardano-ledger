@@ -48,6 +48,7 @@ module Data.Coders
     decodePair,
     decodeSeq,
     decodeStrictSeq,
+    decodeAnnStrictSeq,
     decodeSet,
     decodeAnnSet,
     decodeRecordNamed,
@@ -231,6 +232,9 @@ decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
 decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
 decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
+
+decodeAnnStrictSeq :: Decoder s (Annotator a) -> Decoder s (Annotator (StrictSeq a))
+decodeAnnStrictSeq dec = do xs <- decodeList dec; pure (StrictSeq.fromList <$> (sequence xs))
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
