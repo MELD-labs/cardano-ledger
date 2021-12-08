@@ -26,6 +26,7 @@ module Cardano.Ledger.Babbage.TxBody
       ( TxBody,
         inputs,
         collateral,
+        collateralReturn,
         outputs,
         txcerts,
         txwdrls,
@@ -40,6 +41,7 @@ module Cardano.Ledger.Babbage.TxBody
       ),
     inputs',
     collateral',
+    collateralReturn',
     outputs',
     certs',
     wdrls',
@@ -394,6 +396,7 @@ type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
     _collateral :: !(Set (TxIn (Crypto era))),
+    _collateralReturn :: !(StrictMaybe (TxOut era)),
     _outputs :: !(StrictSeq (TxOut era)),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
@@ -483,6 +486,7 @@ pattern TxBody ::
   BabbageBody era =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
+  StrictMaybe (TxOut era) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
@@ -498,6 +502,7 @@ pattern TxBody ::
 pattern TxBody
   { inputs,
     collateral,
+    collateralReturn,
     outputs,
     txcerts,
     txwdrls,
@@ -515,6 +520,7 @@ pattern TxBody
         TxBodyRaw
           { _inputs = inputs,
             _collateral = collateral,
+            _collateralReturn = collateralReturn,
             _outputs = outputs,
             _certs = txcerts,
             _wdrls = txwdrls,
@@ -533,6 +539,7 @@ pattern TxBody
     TxBody
       inputsX
       collateralX
+      collateralReturnX
       outputsX
       certsX
       wdrlsX
@@ -550,6 +557,7 @@ pattern TxBody
                 TxBodyRaw
                   inputsX
                   collateralX
+                  collateralReturnX
                   outputsX
                   certsX
                   wdrlsX
@@ -575,6 +583,7 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
 collateral' :: TxBody era -> Set (TxIn (Crypto era))
+collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
 txfee' :: TxBody era -> Coin
@@ -590,6 +599,8 @@ inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 txnetworkid' :: TxBody era -> StrictMaybe Network
 
 collateral' (TxBodyConstr (Memo raw _)) = _collateral raw
+
+collateralReturn' (TxBodyConstr (Memo raw _)) = _collateralReturn raw
 
 outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
 
@@ -692,6 +703,7 @@ encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
       _collateral,
+      _collateralReturn,
       _outputs,
       _certs,
       _wdrls,
@@ -705,11 +717,12 @@ encodeTxBodyRaw
       _txnetworkid
     } =
     Keyed
-      ( \i ifee o f t c w u b rsh mi sh ah ni ->
-          TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
+      ( \i ifee ca o f t c w u b rsh mi sh ah ni ->
+          TxBodyRaw i ifee ca o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _collateral)
+      !> Key 16 (To _collateralReturn)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -757,6 +770,7 @@ instance
         TxBodyRaw
           mempty
           mempty
+          SNothing
           StrictSeq.empty
           StrictSeq.empty
           (Wdrl mempty)
@@ -777,6 +791,10 @@ instance
         field
           (\x tx -> tx {_collateral = x})
           (D (decodeSet fromCBOR))
+      bodyFields 16 =
+        field
+          (\x tx -> tx {_collateralReturn = x})
+          (D (SJust <$> fromCBOR))
       bodyFields 1 =
         field
           (\x tx -> tx {_outputs = x})
