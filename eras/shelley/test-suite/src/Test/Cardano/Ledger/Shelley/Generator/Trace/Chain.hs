@@ -58,6 +58,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import qualified Data.UMap as UM
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
@@ -241,11 +242,11 @@ registerGenesisStaking
       newDState :: DState (Crypto era)
       newDState =
         (_dstate oldDPState)
-          { _rewards =
-              Map.map (const $ Coin 0)
-                . Map.mapKeys KeyHashObj
-                $ sgsStake,
-            _delegations = Map.mapKeys KeyHashObj sgsStake
+          { _unified =
+              UM.unify
+                (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj $ sgsStake)
+                (Map.mapKeys KeyHashObj sgsStake)
+                (Map.empty)
           }
 
       -- We consider pools as having been registered in slot 0

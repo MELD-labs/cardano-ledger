@@ -78,7 +78,6 @@ import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
-    DState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -90,6 +89,7 @@ import Cardano.Ledger.Shelley.LedgerState
     createRUpd,
     minfee,
     produced,
+    rewards,
     stakeDistr,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -590,8 +590,8 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
     }
   where
     (UTxOState u deposits fees_ _ _) = _utxoState ls
-    (DPState ds _) = _delegationState ls
-    rewards_ = fold (Map.elems (_rewards ds))
+    (DPState dstate _) = _delegationState ls
+    rewards_ = fold (rewards dstate)
     coins = Val.coin $ balance u
 
 -- | Calculate the total ada in the epoch state

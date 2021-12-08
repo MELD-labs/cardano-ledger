@@ -16,6 +16,7 @@ module Data.Compact.KVVector
     KVMVector,
     toMap,
     fromMap,
+    fromMapWith,
     fromAscList,
     fromAscListN,
     fromAscListWithKey,
@@ -69,6 +70,11 @@ fromMap ::
   (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> KVVector kv vv (k, v)
 fromMap m = fromDistinctAscListN (Map.size m) $ Map.toAscList m
 {-# INLINE fromMap #-}
+
+-- | Convert a `Map.Map` into a sorted key/value vector where we change the type of the range
+fromMapWith ::
+  (VG.Vector kv k, VG.Vector vv u) => (v -> u) -> Map.Map k v -> KVVector kv vv (k, u)
+fromMapWith f m = fromDistinctAscListN (Map.size m) $ map (\(k, v) -> (k, f v)) $ Map.toAscList m
 
 -- | Convert a possibly unsorted assoc list into a KVVector.
 fromList ::

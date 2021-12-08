@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     DState (..),
     PState (..),
     UTxOState (..),
+    rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
@@ -52,6 +53,7 @@ import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.UMap ()
 import GHC.Records (HasField, getField)
 
 -- =======================================
@@ -156,7 +158,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (utxoSt, DPState {_dstate, _pstate}) ->
-              obligation ledgerPp (_rewards _dstate) (_pParams _pstate)
+              obligation ledgerPp (rewards _dstate) (_pParams _pstate)
                 == _deposited utxoSt
         )
     ]

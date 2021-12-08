@@ -107,10 +107,13 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 
 -- | Calculate total possible refunds.
 obligation ::
-  forall crypto pp.
-  (HasField "_keyDeposit" pp Coin, HasField "_poolDeposit" pp Coin) =>
+  forall crypto pp anymap.
+  ( HasField "_keyDeposit" pp Coin,
+    HasField "_poolDeposit" pp Coin,
+    Foldable (anymap (Credential 'Staking crypto))
+  ) =>
   pp ->
-  Map (Credential 'Staking crypto) Coin ->
+  anymap (Credential 'Staking crypto) Coin ->
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Coin
 obligation pp rewards stakePools =

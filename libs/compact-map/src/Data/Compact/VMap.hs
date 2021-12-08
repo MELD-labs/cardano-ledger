@@ -23,6 +23,7 @@ module Data.Compact.VMap
     foldMap,
     foldMapWithKey,
     fromMap,
+    fromMapWith,
     toMap,
     fromList,
     fromListN,
@@ -116,6 +117,10 @@ findWithDefault a k = fromMaybe a . lookup k
 fromMap :: (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> VMap kv vv k v
 fromMap = VMap . KV.fromMap
 {-# INLINE fromMap #-}
+
+fromMapWith :: (VG.Vector kv k, VG.Vector vv u) => (v -> u) -> Map.Map k v -> VMap kv vv k u
+fromMapWith f = VMap . KV.fromMapWith f
+{-# INLINE fromMapWith #-}
 
 toMap :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> Map.Map k v
 toMap = KV.toMap . unVMap

@@ -49,7 +49,30 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
-import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
+import Cardano.Ledger.Shelley.LedgerState
+  ( DPState (..),
+    DState (..),
+    EpochState (..),
+    IncrementalStake (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PPUPState (..),
+    PState (..),
+    UTxOState (..),
+    completeRupd,
+    credMap,
+    deltaF,
+    deltaR,
+    deltaT,
+    iRReserves,
+    iRTreasury,
+    incrementalStakeDistr,
+    keyRefunds,
+    ptrsMap,
+    rewards,
+    rs,
+    stakeDistr,
+  )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -94,6 +117,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff.QuickCheck (ediffEq)
+import qualified Data.UMap as UM
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -253,8 +277,8 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         where
           utxoBal = Val.coin $ balance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
-          ptrs = _ptrs . _dstate $ dp
-          ptrs' = _ptrs . _dstate $ dp'
+          ptrs = ptrsMap . _dstate $ dp
+          ptrs' = ptrsMap . _dstate $ dp'
 
 -- | Various preservation propertiesC
 adaPreservationChain ::
@@ -325,9 +349,9 @@ checkPreservation SourceSignalTarget {source, target, signal} =
             "\n\nCurrent protocol parameters\n",
             show currPP,
             "\n\nReward Accounts before update\n",
-            show oldRAs,
+            show (UM.unUnify oldRAs),
             "\n\nReward Accounts after update\n",
-            show newRAs,
+            show (UM.unUnify newRAs),
             "\n\nMIR\n",
             show mir,
             "\n\nRegistered Reserves MIR total\n",
@@ -359,8 +383,8 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     lsOld = esLState . nesEs . chainNes $ source
     lsNew = esLState . nesEs . chainNes $ target
     pools = _pParams . _pstate . _delegationState $ lsOld
-    oldRAs = _rewards . _dstate . _delegationState $ lsOld
-    newRAs = _rewards . _dstate . _delegationState $ lsNew
+    oldRAs = rewards . _dstate . _delegationState $ lsOld
+    newRAs = rewards . _dstate . _delegationState $ lsNew
 
     proposal = votedValue (proposals . _ppups . _utxoState $ lsOld) currPP 5
     obligationMsgs = case proposal of
@@ -376,7 +400,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
             ]
 
     mir = _irwd . _dstate . _delegationState $ lsOld
-    isRegistered kh _ = Map.member kh oldRAs
+    isRegistered kh _ = UM.member kh oldRAs
     (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
     (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)
 
@@ -384,7 +408,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
       SNothing -> []
       SJust ru'' ->
         let ru = runShelleyBase . runProvM . completeRupd $ ru''
-            regRewards = Map.filterWithKey (\kh _ -> Map.member kh oldRAs) (rs ru)
+            regRewards = Map.filterWithKey (\kh _ -> UM.member kh oldRAs) (rs ru)
          in [ "\n\nSum of new rewards\n",
               show (sumRewards prevPP (rs ru)),
               "\n\nNew rewards\n",
@@ -443,7 +467,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
     rewardDelta :: Coin
     rewardDelta =
       fold
-        ( _rewards . _dstate
+        ( rewards . _dstate
             . _delegationState
             . esLState
             . nesEs
@@ -451,7 +475,7 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
             $ source
         )
         <-> fold
-          ( _rewards . _dstate
+          ( rewards . _dstate
               . _delegationState
               . esLState
               . nesEs
@@ -543,15 +567,15 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
       SourceSignalTarget
         { source =
             ( UTxOState {_utxo = u, _deposited = d, _fees = f},
-              DPState {_dstate = DState {_rewards = rewards}}
+              DPState {_dstate = DState {_unified = umap1}}
               ),
           target =
             ( UTxOState {_utxo = u', _deposited = d', _fees = f'},
-              DPState {_dstate = DState {_rewards = rewards'}}
+              DPState {_dstate = DState {_unified = umap2}}
               )
         } =
         (Val.coin (balance u') <+> d' <+> f') <-> (Val.coin (balance u) <+> d <+> f)
-          === fold rewards <-> fold rewards'
+          === fold (UM.unUnify (UM.Rewards umap1)) <-> fold (UM.unUnify (UM.Rewards umap2))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWdrlsPerTx ::
@@ -568,7 +592,7 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
     map rewardsDecreaseByWdrls $
       sourceSignalTargets ledgerTr
   where
-    rewardsSum = (foldl' (<+>) (Coin 0)) . _rewards . _dstate
+    rewardsSum = (UM.foldl' (<+>) (Coin 0)) . rewards . _dstate
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget

@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
     availableAfterMIR,
     pvCanFollow,
+    rewards,
     _deposited,
     _irwd,
   )
@@ -47,6 +48,7 @@ import Control.State.Transition
   )
 import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
+import Data.UMap (unUnify)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.Records
@@ -116,8 +118,8 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (_rewards dstate) (_pParams pstate)
-          Coin oblgNew = obligation ppNew' (_rewards dstate) (_pParams pstate)
+      let Coin oblgCurr = obligation pp (unUnify (rewards dstate)) (_pParams pstate)
+          Coin oblgNew = obligation ppNew' (unUnify (rewards dstate)) (_pParams pstate)
           diff = oblgCurr - oblgNew
           Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
 
