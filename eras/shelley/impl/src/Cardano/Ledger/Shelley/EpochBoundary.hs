@@ -22,6 +22,7 @@
 module Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
     sumAllStake,
+    sumStakePerPool,
     SnapShot (..),
     SnapShots (..),
     emptySnapShot,
@@ -37,6 +38,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Coin
   ( Coin (..),
+    CompactForm (..),
     coinToRational,
     rationalToCoinViaFloor,
   )
@@ -49,10 +51,10 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Sharing
 import Data.Typeable
@@ -79,7 +81,8 @@ instance CC.Crypto crypto => FromSharedCBOR (Stake crypto) where
   fromSharedCBOR = fmap Stake . fromSharedCBOR
 
 sumAllStake :: Stake crypto -> Coin
-sumAllStake = VMap.foldMap fromCompact . unStake
+sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
+{-# INLINE sumAllStake #-}
 
 -- | Get stake of one pool
 poolStake ::
@@ -88,7 +91,19 @@ poolStake ::
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  Stake $ fromMap (eval (dom (toMap delegs ▷ setSingleton hk) ◁ toMap stake))
+  --Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
+  Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
+
+sumStakePerPool ::
+  VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  Stake crypto ->
+  Map (KeyHash 'StakePool crypto) Coin
+sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
+  where
+    accum !acc cred compactCoin =
+      case VMap.lookup cred delegs of
+        Nothing -> acc
+        Just kh -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
 
 -- | Calculate total possible refunds.
 obligation ::

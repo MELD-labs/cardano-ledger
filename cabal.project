@@ -25,6 +25,8 @@ packages:
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/cardano-data
+  libs/set-algebra
   libs/compact-map
 
 -- Always write GHC env files, because they are needed by the doctests.
@@ -179,6 +181,9 @@ package cardano-ledger-test
 package cardano-protocol-tpraos
   ghc-options: -Werror
 
+package cardano-data
+  ghc-options: -Werror
+
 package compact-map
   ghc-options: -Werror
 
@@ -193,3 +198,7 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
+
+package set-algebra
+  ghc-options: -Werror
+
