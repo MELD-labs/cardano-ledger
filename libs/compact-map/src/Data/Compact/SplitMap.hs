@@ -19,6 +19,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import qualified GHC.Exts as Exts
+import NoThunks.Class
 import Prettyprinter
 import Prelude hiding (lookup)
 
@@ -39,8 +40,9 @@ data SplitMap k v where
 instance NFData v => NFData (SplitMap k v) where
   rnf (SplitMap sp) = rnf sp
 
--- instance NoThunks v => NoThunks (SplitMap k v) where
---   rnf (SplitMap sp) = rnf sp
+instance NoThunks v => NoThunks (SplitMap k v) where
+  showTypeOf _ = "SplitMap"
+  wNoThunks ctxt (SplitMap sm) = wNoThunks ctxt sm
 
 instance (Split k) => Exts.IsList (SplitMap k v) where
   type Item (SplitMap k v) = (k, v)
