@@ -85,7 +85,7 @@ import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Control.SetAlgebra
-  ( BaseRep (SplitR),
+  ( -- BaseRep (SplitR),
     Embed (..),
     Exp (Base),
     HasExp (toExp),
@@ -113,18 +113,18 @@ import Quiet
 
 -- ===============================================
 
-instance
-  (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
-  HasExp (UTxO era) (SMap.SplitMap (TxIn crypto) out)
-  where
-  toExp (UTxO x) = Base SplitR x
+-- instance
+--   (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
+--   HasExp (UTxO era) (SMap.SplitMap (TxIn crypto) out)
+--   where
+--   toExp (UTxO x) = Base SplitR x
 
-instance
-  (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
-  Embed (UTxO era) (SMap.SplitMap (TxIn crypto) out)
-  where
-  toBase (UTxO x) = x
-  fromBase = UTxO
+-- instance
+--   (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
+--   Embed (UTxO era) (SMap.SplitMap (TxIn crypto) out)
+--   where
+--   toBase (UTxO x) = x
+--   fromBase = UTxO
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: SMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)}
@@ -143,9 +143,9 @@ deriving newtype instance
   (Era era, ToCBOR (Core.TxOut era)) =>
   ToCBOR (UTxO era)
 
-deriving newtype instance
-  (Era era, FromCBOR (Core.TxOut era)) =>
-  FromCBOR (UTxO era)
+-- deriving newtype instance
+--   (Era era, FromCBOR (Core.TxOut era)) =>
+--   FromCBOR (UTxO era)
 
 instance
   ( CC.Crypto (Crypto era),
