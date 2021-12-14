@@ -19,8 +19,8 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake, PoolDistr (..))
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs)
 import Control.Iterate.Collect (Collect (..), front, hasElem, none, one)
 import Data.BiMap (BiMap, Bimap, biMapEmpty)
-import Data.Compact.SplitMap (Split, SplitMap)
-import qualified Data.Compact.SplitMap as Split
+-- import Data.Compact.SplitMap (Split, SplitMap)
+-- import qualified Data.Compact.SplitMap as Split
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -65,7 +65,7 @@ instance Show (Exp t) where
   show (Base MapR _) = "Map?"
   show (Base SetR _) = "Set?"
   show (Base ListR _) = "List?"
-  show (Base SplitR _) = "SplitMap?"
+  -- show (Base SplitR _) = "SplitMap?"
   show (Base SingleR (Single _ _)) = "Single(_ _)"
   show (Base SingleR (SetSingle _)) = "SetSingle(_)"
   show (Base rep _x) = show rep ++ "?"
@@ -115,8 +115,8 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
 
-instance (Ord k, Split k) => HasExp (SplitMap k v) (SplitMap k v) where
-  toExp x = Base SplitR x
+-- instance (Ord k, Split k) => HasExp (SplitMap k v) (SplitMap k v) where
+--   toExp x = Base SplitR x
 
 -- =======================================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
@@ -495,8 +495,8 @@ instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
 
-instance (Ord k, Split k) => HasQuery (SplitMap k v) k v where
-  query xs = BaseD SplitR xs
+-- instance (Ord k, Split k) => HasQuery (SplitMap k v) k v where
+--   query xs = BaseD SplitR xs
 
 -- =================================================
 -- Show Instance of Query
@@ -651,7 +651,7 @@ materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
 materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
-materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
+-- materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
 
 -- =============================================
 

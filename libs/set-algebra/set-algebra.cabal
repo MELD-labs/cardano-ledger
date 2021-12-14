@@ -42,6 +42,6 @@ library
                      , base >=4.11 && <5
                      , cardano-data
                      , cardano-ledger-core
-                     , compact-map
+                     -- , compact-map
                      , containers
   hs-source-dirs:      src
