@@ -108,14 +108,14 @@ splitwholeS :: (Eq k, Show k, Split k) => k -> SplitMap k Int -> Property
 splitwholeS k m =
   case splitLookup k m of
     (m1, Nothing, m2) -> m === union m1 m2
-    (m1, Just v, m2) -> m === (insert k v (union m1 m2))
+    (m1, Just v, m2) -> m === insert k v (union m1 m2)
 
 testWhen :: Test k => SplitMap k Int -> SplitMap k Int -> Bool
 testWhen xs ys = intersectionWhen p xs ys == filterWithKey q (intersectionWith r xs ys)
   where
     q _k v = even v
     r _u v = v
-    p k u v = if (q k v) then Just (r u v) else Nothing
+    p k u v = if q k v then Just (r u v) else Nothing
 
 -- ===============================================
 

@@ -85,6 +85,7 @@ import Control.Monad (when)
 import Control.SetAlgebra (forwards)
 import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Either as Either (partitionEithers)
 import Data.List (foldl', nub)
 import Data.Map.Strict (Map)
@@ -256,8 +257,9 @@ genTx
             spendingBalanceUtxo
               <+> inject ((withdrawals <-> deposits) <+> refunds)
           n =
-            if (Map.size . unUTxO) utxo < genTxStableUtxoSize defaultConstants -- something moderate 80-120
-              then genTxUtxoIncrement defaultConstants -- something small 2-5
+            if SplitMap.size (unUTxO utxo) < genTxStableUtxoSize defaultConstants
+              then -- something moderate 80-120 ^
+                genTxUtxoIncrement defaultConstants -- something small 2-5
               else 0 -- no change at all
               -- This algorithm has an instability in that if we don't balance
               -- genTxStableUtxoSize and genTxUtxoIncrement correctly the size
@@ -442,16 +444,18 @@ genNextDelta
               else -- add a new input to cover the fee
               do
                 let txBody = getField @"body" tx
-                    inputs_in_use = (getField @"inputs" txBody <> extraInputs)
+                    inputsInUse = getField @"inputs" txBody <> extraInputs
                     utxo' :: UTxO era
                     utxo' =
                       -- Remove possible inputs from Utxo, if they already
                       -- appear in inputs.
                       UTxO $
-                        Map.filter (genEraGoodTxOut @era) $ -- filter out URxO entries where the TxOut are not appropriate for this Era (i.e. Keylocked in AlonzoEra)
-                          Map.withoutKeys
-                            (unUTxO utxo)
-                            inputs_in_use
+                        SplitMap.filter
+                          genEraGoodTxOut
+                          -- filter out UTxO entries where the TxOut are not
+                          -- appropriate for this Era (i.e. Keylocked in
+                          -- AlonzoEra)
+                          (unUTxO utxo `SplitMap.withoutKeysSet` inputsInUse)
                 (inputs, value, (vkeyPairs, msigPairs)) <-
                   genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
                 -- It is possible that the Utxo has no possible inputs left, so
@@ -756,12 +760,12 @@ genInputs ::
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
-  selectedUtxo <- getNRandomPairs numInputs utxo
+  selectedUtxo <- getNRandomPairs numInputs (SplitMap.toMap utxo)
 
   let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
   return
     ( inputs,
-      balance (UTxO (Map.fromList selectedUtxo) :: UTxO era),
+      balance (UTxO (SplitMap.fromList selectedUtxo) :: UTxO era),
       Either.partitionEithers witnesses
     )
   where

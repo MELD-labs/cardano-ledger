@@ -62,6 +62,7 @@ library
     cardano-protocol-tpraos,
     cardano-slotting,
     containers,
+    compact-map,
     data-default-class,
     genvalidity,
     genvalidity-scientific,

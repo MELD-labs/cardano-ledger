@@ -132,7 +132,7 @@ test-suite cardano-ledger-shelley-test
   main-is:             Tests.hs
   other-modules:
       Test.Control.Iterate.SetAlgebra
-      Test.Control.Iterate.SplitMapRules
+      --Test.Control.Iterate.SplitMapRules
       Test.Cardano.Ledger.Shelley.Examples
       Test.Cardano.Ledger.Shelley.Examples.Combinators
       Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
@@ -233,6 +233,7 @@ benchmark mainbench
     cardano-prelude,
     cardano-protocol-tpraos,
     cardano-slotting,
+    compact-map,
     containers,
     criterion,
     data-default-class,
@@ -250,4 +251,4 @@ benchmark mainbench
       -threaded
       -rtsopts
       -with-rtsopts=-N
-      -O
+      -O2

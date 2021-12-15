@@ -95,7 +95,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
-import Cardano.Ledger.Shelley.UTxO (txins, txouts)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader
@@ -110,6 +110,7 @@ import Cardano.Protocol.TPraos.BHeader
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫), (◁))
 import Control.State.Transition (STS (State))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -217,10 +218,10 @@ newUTxO txb cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = _utxoState ls
-    utxo = _utxo utxoSt
+    utxo = SplitMap.toMap $ unUTxO $ _utxo utxoSt
     utxoAdd = txouts @era txb
-    utxoDel = eval (txins @era txb ◁ utxo)
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd)
+    utxoDel = UTxO $ SplitMap.fromMap $ eval (txins @era txb ◁ utxo)
+    utxo' = UTxO $ SplitMap.fromMap $ eval ((txins @era txb ⋪ utxo) ∪ SplitMap.toMap (unUTxO utxoAdd))
     sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
     ls' = ls {_utxoState = utxoSt'}

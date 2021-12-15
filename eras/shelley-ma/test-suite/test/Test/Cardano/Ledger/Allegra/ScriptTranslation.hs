@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation
   )
 where
 
+import qualified Data.Compact.SplitMap as SplitMap
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.Shelley.API as S
@@ -68,7 +69,7 @@ testScriptPostTranslation =
               S.StakeRefNull
           utxo =
             S.UTxO $
-              Map.singleton
+              SplitMap.singleton
                 (S.TxIn bootstrapTxId 0)
                 (S.TxOut addr (Val.inject (S.Coin 1)))
           env = S.LedgerEnv (SlotNo 0) 0 emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))

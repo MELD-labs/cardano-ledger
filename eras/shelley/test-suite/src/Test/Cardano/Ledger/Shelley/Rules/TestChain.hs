@@ -68,7 +68,7 @@ import Cardano.Protocol.TPraos.BHeader
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Provenance (runProvM)
-import Control.SetAlgebra (dom, domain, eval, (<|), (∩), (⊆))
+import Control.SetAlgebra (eval, (∩))
 import Control.State.Transition
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
@@ -80,6 +80,7 @@ import Control.State.Transition.Trace
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default)
 import Data.Foldable (fold, foldl', toList)
@@ -230,7 +231,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
                   "\ntx\n",
                   show tx,
                   "\nsize original utxo\n",
-                  show (Map.size $ unUTxO u),
+                  show (SplitMap.size $ unUTxO u),
                   "\noriginal utxo\n",
                   show u,
                   "\noriginal sd\n",
@@ -649,13 +650,13 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
-    createdIsConsumed SourceSignalTarget {source = (UTxOState {_utxo = u}, dstate), signal = tx} =
+    createdIsConsumed SourceSignalTarget {source = (UTxOState {_utxo = UTxO u}, dstate), signal = tx} =
       inps === outs
       where
         txb = getField @"body" tx
         pools = _pParams . _pstate $ dstate
         inps =
-          Val.coin (balance @era (eval ((getField @"inputs" txb) <| u)))
+          Val.coin (balance @era (UTxO (SplitMap.restrictKeysSet u (getField @"inputs" txb))))
             <> keyRefunds pp_ txb
             <> fold (unWdrl (getField @"wdrls" txb))
         outs =
@@ -678,10 +679,11 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
       sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    outputPreserved SourceSignalTarget {target = (UTxOState {_utxo = (UTxO u')}, _), signal = tx} =
+    outputPreserved SourceSignalTarget {target = (UTxOState {_utxo = UTxO utxo}, _), signal = tx} =
       let UTxO outs = txouts @era (getField @"body" tx)
        in property $
-            hasFailedScripts tx || outs `Map.isSubmapOf` u'
+            hasFailedScripts tx
+              .||. counterexample "TxOuts are not a subset of UTxO" (outs `SplitMap.isSubmapOf` utxo)
 
 canRestrictUTxO ::
   forall era ledger.
@@ -693,17 +695,16 @@ canRestrictUTxO ::
   Property
 canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
-    map outputPreserved $
-      zip (sourceSignalTargets ledgerTrFull) (sourceSignalTargets ledgerTrRestr)
+    zipWith outputPreserved (sourceSignalTargets ledgerTrFull) (sourceSignalTargets ledgerTrRestr)
   where
     (_, ledgerTrFull) = ledgerTraceFromBlock @era @ledger chainSt block
     (UTxO irrelevantUTxO, ledgerTrRestr) =
       ledgerTraceFromBlockWithRestrictedUTxO @era @ledger chainSt block
     outputPreserved
-      ( SourceSignalTarget {target = (UTxOState {_utxo = UTxO uFull}, _)},
-        SourceSignalTarget {target = (UTxOState {_utxo = UTxO uRestr}, _)}
-        ) =
-        (uRestr `Map.disjoint` irrelevantUTxO) .&&. uFull === (uRestr `Map.union` irrelevantUTxO)
+      SourceSignalTarget {target = (UTxOState {_utxo = UTxO uFull}, _)}
+      SourceSignalTarget {target = (UTxOState {_utxo = UTxO uRestr}, _)} =
+        counterexample "non-disjoint" (uRestr `SplitMap.disjoint` irrelevantUTxO)
+          .&&. uFull === (uRestr `SplitMap.union` irrelevantUTxO)
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
@@ -723,8 +724,8 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     inputsEliminated SourceSignalTarget {target = (UTxOState {_utxo = (UTxO u')}, _), signal = tx} =
       property $
-        (hasFailedScripts tx)
-          || (Set.null $ eval (txins @era (getField @"body" tx) ∩ dom u'))
+        hasFailedScripts tx
+          || Set.null (eval (txins @era (getField @"body" tx) ∩ SplitMap.toSet u'))
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
@@ -744,18 +745,16 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     newEntryPresent
       SourceSignalTarget
-        { source = (UTxOState {_utxo = (UTxO u)}, _),
+        { source = (UTxOState {_utxo = UTxO u}, _),
           signal = tx,
-          target = (UTxOState {_utxo = (UTxO u')}, _)
+          target = (UTxOState {_utxo = UTxO u'}, _)
         } =
         let UTxO outs = txouts @era (getField @"body" tx)
-            outIds = Set.map (\(TxIn _id _) -> _id) (domain outs)
-            oldIds = Set.map (\(TxIn _id _) -> _id) (domain u)
+            outIds = Set.map (\(TxIn _id _) -> _id) (SplitMap.toSet outs)
+            oldIds = Set.map (\(TxIn _id _) -> _id) (SplitMap.toSet u)
          in property $
               hasFailedScripts tx
-                || ( null (outIds `Set.intersection` oldIds)
-                       && eval ((dom outs) ⊆ (dom u'))
-                   )
+                || ((outIds `Set.disjoint` oldIds) && (outs `SplitMap.isSubmapOf` u'))
 
 -- | Check for required signatures in case of Multi-Sig. There has to be one set
 -- of possible signatures for a multi-sig script which is a sub-set of the
@@ -1034,7 +1033,7 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
     txIns = neededTxInsForBlock block
     (utxoSt, delegationSt) = ledgerSt0
     utxo = unUTxO . _utxo $ utxoSt
-    (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
+    (relevantUTxO, irrelevantUTxO) = SplitMap.partitionWithKey (const . (`Set.member` txIns)) utxo
     ledgerSt0' = (utxoSt {_utxo = UTxO relevantUTxO}, delegationSt)
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState

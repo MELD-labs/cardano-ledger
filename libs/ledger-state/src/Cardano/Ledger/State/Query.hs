@@ -26,6 +26,7 @@ import Control.Monad
 import Control.Monad.Trans.Reader
 import Control.SetAlgebra (biMapFromList, biMapToMap)
 import qualified Data.Compact.KeyMap as KeyMap
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
@@ -68,7 +69,7 @@ insertUTxO ::
   Key UtxoState ->
   ReaderT SqlBackend m ()
 insertUTxO utxo stateKey = do
-  mapM_ insertTxOut $ Map.toList (Shelley.unUTxO utxo)
+  mapM_ insertTxOut $ SplitMap.toList (Shelley.unUTxO utxo)
   where
     insertTxOut (TxIn.TxIn txId txIx, out) = do
       txKey <-
@@ -638,7 +639,7 @@ loadDStateNoSharing fp =
 loadUTxONoSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.UTxO CurrentEra)
 loadUTxONoSharing fp =
-  runSqlite fp (Shelley.UTxO <$> runConduitFold sourceUTxO noSharing)
+  runSqlite fp (Shelley.UTxO <$> runConduitFold sourceUTxO noSharingSplitMap)
 
 loadLedgerStateNoSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.LedgerState CurrentEra)
@@ -646,7 +647,7 @@ loadLedgerStateNoSharing fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO noSharing
+    m <- runConduitFold sourceUTxO noSharingSplitMap
     getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 loadLedgerStateDStateSharing ::
@@ -726,7 +727,7 @@ getLedgerStateWithSharing ese = do
     maybe (error "Impossible") (pure . entityVal)
       =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
   dstate <- getDStateWithSharing ledgerStateDstateId
-  m <- runConduitFold sourceUTxO noSharing
+  m <- runConduitFold sourceUTxO noSharingSplitMap
   getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 getLedgerStateNoSharing ::
@@ -738,7 +739,7 @@ getLedgerStateNoSharing ese = do
     maybe (error "Impossible") (pure . entityVal)
       =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
   dstate <- getDStateNoSharing ledgerStateDstateId
-  m <- runConduitFold sourceUTxO noSharing
+  m <- runConduitFold sourceUTxO noSharingSplitMap
   getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 loadEpochState :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)

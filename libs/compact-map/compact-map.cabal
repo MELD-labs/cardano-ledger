@@ -36,6 +36,7 @@ library
                      , Data.Compact.SplitMap
   other-modules:       Data.Compact.KVVector
   build-depends:       base >=4.11 && <5
+                     , bytestring
                      , cardano-binary
                      , cardano-prelude
                      , containers

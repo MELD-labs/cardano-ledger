@@ -590,7 +590,7 @@ unionInternal n combine x y = case3 emptyC1 leafF1 arrayF1 x
       where
         emptyC2 = x
         -- flip the combine function because the Leaf comes from the right, but
-        -- in insertWithKeyInternal is is on the left.
+        -- in insertWithKeyInternal is on the left.
         leafF2 k v = insertWithKeyInternal n (\key a b -> combine key b a) (keyPath k) k v x
         arrayF2 bm2 arr2 = buildKeyMap bm (arrayFromBitmap bm actionAt)
           where

@@ -67,10 +67,11 @@ module Data.Coders
     encodeFoldableEncoder,
     encodeMap,
     encodeVMap,
-    decodeSplitMap,
+    encodeSplitMap,
     wrapCBORMap,
     decodeMap,
     decodeVMap,
+    decodeSplitMap,
     decodeMapByKey,
     decodeMapContents,
     decodeMapTraverse,
@@ -135,8 +136,8 @@ import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
-import qualified Data.Compact.SplitMap as SMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import qualified Data.Map as Map
@@ -303,6 +304,12 @@ wrapCBORArray len contents =
 -- Era, which are not always cannonical. We want to make these
 -- cannonical improvements easy to use.
 
+encodeSplitMap :: (k -> Encoding) -> (v -> Encoding) -> SplitMap.SplitMap k v -> Encoding
+encodeSplitMap encodeKey encodeValue m =
+  let l = fromIntegral $ SplitMap.size m
+      contents = SplitMap.foldrWithKey' (\k v acc -> encodeKey k <> encodeValue v <> acc) mempty m
+   in wrapCBORMap l contents
+
 encodeVMap ::
   (VMap.Vector vk k, VMap.Vector vv v) =>
   (k -> Encoding) ->
@@ -336,7 +343,7 @@ decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
 decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
-decodeSplitMap :: SMap.Split a => Decoder s a -> Decoder s b -> Decoder s (SMap.SplitMap a b)
+decodeSplitMap :: SplitMap.Split a => Decoder s a -> Decoder s b -> Decoder s (SplitMap.SplitMap a b)
 decodeSplitMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
 decodeMapByKey ::
