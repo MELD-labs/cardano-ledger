@@ -69,8 +69,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
+import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -110,6 +110,7 @@ import Cardano.Ledger.Val
     encodeMint,
     isZero,
   )
+import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -117,6 +118,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
 import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
@@ -125,8 +127,6 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
-import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
 
 data TxOut era
   = TxOutCompact'
@@ -591,18 +591,20 @@ instance
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
           txOut -> txOut
     internTxOut <$$> case lenOrIndef of
-      Nothing -> pure <$> do
-        a <- fromCBOR
-        cv <- decodeNonNegative
-        decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv
-          False -> do
-            dh <- fromCBOR
-            decodeBreakOr >>= \case
-              True -> pure $ TxOutCompactDH a cv dh
-              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
-      Just 2 -> pure <$$>
-        TxOutCompact
+      Nothing ->
+        pure <$> do
+          a <- fromCBOR
+          cv <- decodeNonNegative
+          decodeBreakOr >>= \case
+            True -> pure $ TxOutCompact a cv
+            False -> do
+              dh <- fromCBOR
+              decodeBreakOr >>= \case
+                True -> pure $ TxOutCompactDH a cv dh
+                False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+      Just 2 ->
+        pure
+          <$$> TxOutCompact
           <$> fromCBOR
           <*> decodeNonNegative
       Just 3 ->
@@ -612,11 +614,12 @@ instance
             b <- decodeNonNegative
             c <- fromCBOR
             pure $ TxOutCompactDatum a b <$> c
-          False -> fmap pure $
-            TxOutCompactDH
-              <$> fromCBOR
-              <*> decodeNonNegative
-              <*> fromCBOR
+          False ->
+            fmap pure $
+              TxOutCompactDH
+                <$> fromCBOR
+                <*> decodeNonNegative
+                <*> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 encodeTxBodyRaw ::
@@ -670,6 +673,7 @@ encodeTxBodyRaw
       fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
 {-# INLINE doubleFmap #-}
+
 {-# INLINE (<$$>) #-}
 doubleFmap, (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 doubleFmap = fmap . fmap
@@ -827,4 +831,3 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
-

@@ -37,6 +37,7 @@ import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
+import Data.Coders (Annotator)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -44,7 +45,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 data PPUP era
 

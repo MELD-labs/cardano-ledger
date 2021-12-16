@@ -653,7 +653,6 @@ instance
   where
   fromCBOR = pure <$> fromCBOR
 
-
 instance
   ( Era era,
     DecodeNonNegative (Core.Value era),

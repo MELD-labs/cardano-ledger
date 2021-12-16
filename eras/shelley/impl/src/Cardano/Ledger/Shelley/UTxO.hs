@@ -40,7 +40,7 @@ module Cardano.Ledger.Shelley.UTxO
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), Annotator (..))
+import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)

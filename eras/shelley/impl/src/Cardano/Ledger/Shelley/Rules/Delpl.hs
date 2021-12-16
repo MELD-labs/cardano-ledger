@@ -22,9 +22,10 @@ module Cardano.Ledger.Shelley.Rules.Delpl
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Annotator,
+    FromCBOR (..),
     ToCBOR (..),
-    encodeListLen, Annotator
+    encodeListLen,
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
 import qualified Cardano.Ledger.Core as Core

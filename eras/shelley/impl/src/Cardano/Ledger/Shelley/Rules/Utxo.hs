@@ -107,6 +107,7 @@ import Control.State.Transition
     wrapFailed,
     (?!),
   )
+import Data.Coders (Annotator)
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -118,7 +119,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Data.Coders (Annotator)
 
 data UTXO era
 

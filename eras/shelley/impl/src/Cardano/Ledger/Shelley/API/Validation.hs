@@ -26,7 +26,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
-import Cardano.Ledger.Core (ChainData, AnnotatedData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, TxSeq)
 import Cardano.Ledger.Serialization (ToCBORGroup)

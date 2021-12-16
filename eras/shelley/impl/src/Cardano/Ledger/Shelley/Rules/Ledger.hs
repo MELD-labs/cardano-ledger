@@ -24,9 +24,10 @@ module Cardano.Ledger.Shelley.Rules.Ledger
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Annotator,
+    FromCBOR (..),
     ToCBOR (..),
-    encodeListLen, Annotator
+    encodeListLen,
   )
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)

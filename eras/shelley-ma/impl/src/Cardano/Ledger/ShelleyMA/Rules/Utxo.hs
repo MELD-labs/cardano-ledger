@@ -15,7 +15,7 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize, Annotator)
+import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import Cardano.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -501,7 +501,6 @@ instance
           outs <- decodeList fromCBOR
           pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k
-
 
 instance
   ( TransValue FromCBOR era,

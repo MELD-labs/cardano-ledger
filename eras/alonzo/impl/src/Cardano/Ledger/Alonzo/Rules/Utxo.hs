@@ -13,7 +13,7 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize, Annotator (Annotator))
+import Cardano.Binary (Annotator (Annotator), FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt,
@@ -76,12 +76,14 @@ import Data.Coders
     Encode (..),
     Wrapped (Open),
     decode,
+    decodeAnnList,
     decodeList,
     decodeSet,
     encode,
     encodeFoldable,
     (!>),
-    (<!), decodeAnnList, (<*!)
+    (<!),
+    (<*!),
   )
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
@@ -630,12 +632,15 @@ decFailA 8 = Ann $ SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
 decFailA 9 = Ann $ SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
 decFailA 10 = SumD (pure OutputBootAddrAttrsTooBig) <*! D (decodeAnnList fromCBOR)
 decFailA 11 = Ann $ SumD TriesToForgeADA
-decFailA 12 = SumD (pure OutputTooBigUTxO) <*! D (do
-    xs <- decodeAnnList $ do 
-      (a, b, Annotator fc) <- fromCBOR
-      pure $ Annotator $ \fbs -> (a, b, fc fbs)
-    pure xs
-  )
+decFailA 12 =
+  SumD (pure OutputTooBigUTxO)
+    <*! D
+      ( do
+          xs <- decodeAnnList $ do
+            (a, b, Annotator fc) <- fromCBOR
+            pure $ Annotator $ \fbs -> (a, b, fc fbs)
+          pure xs
+      )
 decFailA 13 = Ann $ SumD InsufficientCollateral <! From <! From
 decFailA 14 = SumD (pure ScriptsNotPaidUTxO) <*! From
 decFailA 15 = Ann $ SumD ExUnitsTooBigUTxO <! From <! From

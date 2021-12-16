@@ -58,13 +58,13 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.ByteString as BS
+import Data.Coders (Annotator)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 data POOL (era :: Type)
 

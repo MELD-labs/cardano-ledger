@@ -71,6 +71,7 @@ import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.State.Transition
+import Data.Coders (Annotator)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
@@ -80,7 +81,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 data DELEG era
 

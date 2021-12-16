@@ -101,6 +101,7 @@ import Control.State.Transition
     (?!),
     (?!:),
   )
+import Data.Coders (Annotator)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import Data.Sequence.Strict (StrictSeq)
@@ -112,7 +113,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 -- =========================================
 

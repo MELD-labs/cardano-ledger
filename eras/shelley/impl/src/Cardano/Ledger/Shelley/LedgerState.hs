@@ -244,10 +244,12 @@ import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
-  ( Decode (From, RecD, Ann),
+  ( Annotator (..),
+    Decode (Ann, From, RecD),
     decode,
     decodeRecordNamed,
-    (<!), Annotator (..), (<*!)
+    (<!),
+    (<*!),
   )
 import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
@@ -526,9 +528,10 @@ instance
         esPrevPp <- lift fromCBOR
         esPp <- lift fromCBOR
         esNonMyopic <- fromSharedLensCBOR _2
-        pure $ Annotator $ \fbs ->
-          let esLState = runAnnotator esLState' fbs
-          in EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
+        pure $
+          Annotator $ \fbs ->
+            let esLState = runAnnotator esLState' fbs
+             in EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
 
 instance
   ( FromCBOR (Core.PParams era),
@@ -705,9 +708,10 @@ instance
       _fees <- fromCBOR
       _ppups <- fromCBOR
       _stakeDistro <- fromSharedCBOR credInterns
-      pure $ Annotator $ \fbs ->
-        let _utxo = runAnnotator _utxo' fbs
-        in UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
+      pure $
+        Annotator $ \fbs ->
+          let _utxo = runAnnotator _utxo' fbs
+           in UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
 
 instance
   ( TransValue FromCBOR era,
@@ -868,9 +872,10 @@ instance
     decodeRecordNamedT "LedgerState" (const 2) $ do
       _delegationState <- fromSharedPlusCBOR
       _utxoState' <- fromSharedLensCBOR _1
-      pure $ Annotator $ \fbs ->
-        let _utxoState = runAnnotator _utxoState' fbs
-        in LedgerState {_utxoState, _delegationState}
+      pure $
+        Annotator $ \fbs ->
+          let _utxoState = runAnnotator _utxoState' fbs
+           in LedgerState {_utxoState, _delegationState}
 
 instance
   ( Era era,
