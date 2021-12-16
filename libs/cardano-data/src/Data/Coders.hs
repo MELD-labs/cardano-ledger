@@ -45,6 +45,7 @@ module Data.Coders
     decode,
     runE, -- Used in testing
     decodeList,
+    decodeAnnList,
     decodePair,
     decodeSeq,
     decodeStrictSeq,
@@ -226,6 +227,9 @@ unusedRequiredKeys used required name =
 
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
+
+decodeAnnList :: Decoder s (Annotator t) -> Decoder s (Annotator [t])
+decodeAnnList dec = do xs <- decodeList dec; pure (sequence xs)
 
 decodeSeq :: Decoder s a -> Decoder s (Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder

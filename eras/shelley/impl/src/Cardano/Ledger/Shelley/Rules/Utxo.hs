@@ -118,6 +118,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Data.Coders (Annotator)
 
 data UTXO era
 
@@ -226,6 +227,17 @@ instance
     OutputBootAddrAttrsTooBig outs ->
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable outs
+
+instance
+  ( TransValue FromCBOR era,
+    TransUTxO FromCBOR era,
+    Val.DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (Annotator (UtxoPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 instance
   ( TransValue FromCBOR era,

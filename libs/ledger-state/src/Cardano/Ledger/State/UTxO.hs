@@ -7,6 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-orphans -funbox-strict-fields #-}
 
 module Cardano.Ledger.State.UTxO where
@@ -39,6 +40,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
+import qualified Data.Text as T
 import Numeric.Natural
 import Prettyprinter
 import Text.Printf
@@ -49,14 +51,20 @@ type CurrentEra = AlonzoEra C
 
 --- Loading
 readNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
-readNewEpochState = readFromCBOR
+readNewEpochState = readFromCBORA
 
 readEpochState :: FilePath -> IO (EpochState CurrentEra)
-readEpochState = readFromCBOR
+readEpochState = readFromCBORA
 
 readFromCBOR :: FromCBOR a => FilePath -> IO a
 readFromCBOR fp =
   LBS.readFile fp <&> decodeFull >>= \case
+    Left exc -> throwIO exc
+    Right res -> pure res
+
+readFromCBORA :: FromCBOR (Annotator a) => FilePath -> IO a
+readFromCBORA fp = do
+  LBS.readFile fp <&> decodeAnnotator (T.pack fp) fromCBOR >>= \case
     Left exc -> throwIO exc
     Right res -> pure res
 

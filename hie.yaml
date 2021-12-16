@@ -95,3 +95,9 @@ cradle:
 
     - path: "libs/compact-map"
       component: "compact-map:bench:bench"
+
+    - path: "libs/cardano-data/src"
+      component: "lib:cardano-data"
+
+    - path: "libs/ledger-state/src"
+      component: "lib:ledger-state"

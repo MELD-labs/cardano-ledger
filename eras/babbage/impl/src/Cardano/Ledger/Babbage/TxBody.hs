@@ -53,7 +53,7 @@ module Cardano.Ledger.Babbage.TxBody
     scriptIntegrityHash',
     adHash',
     txnetworkid',
-    AlonzoBody,
+    BabbageBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
   )
@@ -69,7 +69,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
+import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -320,7 +320,7 @@ data TxBodyRaw era = TxBodyRaw
     _mint :: !(Value (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
-    -- Operations on the TxBody in the AlonzoEra depend upon this.
+    -- Operations on the TxBody in the BabbageEra depend upon this.
     _scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _txnetworkid :: !(StrictMaybe Network)
@@ -388,7 +388,7 @@ deriving via
     FromCBOR (Annotator (TxBody era))
 
 -- The Set of constraints necessary to use the TxBody pattern
-type AlonzoBody era =
+type BabbageBody era =
   ( Era era,
     Compactible (Core.Value era),
     ToCBOR (Core.Script era),
@@ -396,7 +396,7 @@ type AlonzoBody era =
   )
 
 pattern TxBody ::
-  AlonzoBody era =>
+  BabbageBody era =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   StrictMaybe (TxOut era) ->
@@ -490,7 +490,7 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using
--- the record syntax in the TxBody pattern, they inherit the (AlonzoBody era)
+-- the record syntax in the TxBody pattern, they inherit the (BabbageBody era)
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
@@ -572,9 +572,6 @@ instance
   where
   fromCBOR = fromNotSharedCBOR
 
-constAnn :: Decoder s a -> Decoder s (Annotator a)
-constAnn = fmap (Annotator . const)
-
 instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
@@ -594,7 +591,7 @@ instance
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
           txOut -> txOut
     internTxOut <$$> case lenOrIndef of
-      Nothing -> constAnn $ do
+      Nothing -> pure <$> do
         a <- fromCBOR
         cv <- decodeNonNegative
         decodeBreakOr >>= \case
@@ -604,7 +601,7 @@ instance
             decodeBreakOr >>= \case
               True -> pure $ TxOutCompactDH a cv dh
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
-      Just 2 -> constAnn $
+      Just 2 -> pure <$$>
         TxOutCompact
           <$> fromCBOR
           <*> decodeNonNegative
@@ -615,7 +612,7 @@ instance
             b <- decodeNonNegative
             c <- fromCBOR
             pure $ TxOutCompactDatum a b <$> c
-          False -> constAnn $
+          False -> fmap pure $
             TxOutCompactDH
               <$> fromCBOR
               <*> decodeNonNegative

@@ -54,6 +54,7 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Data.Coders (Annotator)
 
 data LEDGERS era
 
@@ -103,6 +104,14 @@ instance
   FromCBOR (LedgersPredicateFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
+  ) =>
+  FromCBOR (Annotator (LedgersPredicateFailure era))
+  where
+  fromCBOR = fmap LedgerFailure <$> fromCBOR
 
 instance
   ( Era era,

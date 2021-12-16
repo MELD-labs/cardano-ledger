@@ -244,10 +244,10 @@ import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
-  ( Decode (From, RecD),
+  ( Decode (From, RecD, Ann),
     decode,
     decodeRecordNamed,
-    (<!),
+    (<!), Annotator (..), (<*!)
   )
 import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
@@ -510,6 +510,30 @@ instance
   ( FromCBOR (Core.PParams era),
     TransValue FromCBOR era,
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromSharedCBOR (Annotator (Core.TxOut era)),
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    Era era
+  ) =>
+  FromCBOR (Annotator (EpochState era))
+  where
+  fromCBOR =
+    decodeRecordNamed "EpochState" (const 6) $
+      flip evalStateT mempty $ do
+        esAccountState <- lift fromCBOR
+        esLState' <- fromSharedPlusCBOR
+        esSnapshots <- fromSharedPlusCBOR
+        esPrevPp <- lift fromCBOR
+        esPp <- lift fromCBOR
+        esNonMyopic <- fromSharedLensCBOR _2
+        pure $ Annotator $ \fbs ->
+          let esLState = runAnnotator esLState' fbs
+          in EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
+
+instance
+  ( FromCBOR (Core.PParams era),
+    TransValue FromCBOR era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
     FromSharedCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     FromCBOR (State (Core.EraRule "PPUP" era)),
@@ -526,7 +550,7 @@ instance
         esPrevPp <- lift fromCBOR
         esPp <- lift fromCBOR
         esNonMyopic <- fromSharedLensCBOR _2
-        pure EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
+        pure $ EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
 
 data UpecState era = UpecState
   { -- | Current protocol parameters.
@@ -665,6 +689,29 @@ instance TransUTxOState ToCBOR era => ToCBOR (UTxOState era) where
 instance
   ( TransValue FromCBOR era,
     FromCBOR (State (Core.EraRule "PPUP" era)),
+    FromSharedCBOR (Annotator (Core.TxOut era)),
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
+  ) =>
+  FromSharedCBOR (Annotator (UTxOState era))
+  where
+  type
+    Share (Annotator (UTxOState era)) =
+      Interns (Credential 'Staking (Crypto era))
+  fromSharedCBOR credInterns =
+    decodeRecordNamed "UTxOState" (const 5) $ do
+      _utxo' <- fromSharedCBOR credInterns
+      _deposited <- fromCBOR
+      _fees <- fromCBOR
+      _ppups <- fromCBOR
+      _stakeDistro <- fromSharedCBOR credInterns
+      pure $ Annotator $ \fbs ->
+        let _utxo = runAnnotator _utxo' fbs
+        in UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
+
+instance
+  ( TransValue FromCBOR era,
+    FromCBOR (State (Core.EraRule "PPUP" era)),
     FromSharedCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era)
@@ -681,7 +728,7 @@ instance
       _fees <- fromCBOR
       _ppups <- fromCBOR
       _stakeDistro <- fromSharedCBOR credInterns
-      pure UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
+      pure $ UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
 
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
@@ -735,13 +782,33 @@ instance
   where
   fromCBOR = do
     decode $
-      RecD NewEpochState
+      (RecD NewEpochState)
         <! From
         <! From
         <! From
         <! From
         <! From
         <! From
+
+instance
+  ( Era era,
+    FromCBOR (Core.PParams era),
+    FromSharedCBOR (Annotator (Core.TxOut era)),
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (Annotator (NewEpochState era))
+  where
+  fromCBOR = do
+    decode $
+      Ann (RecD NewEpochState)
+        <*! Ann From
+        <*! Ann From
+        <*! Ann From
+        <*! From
+        <*! Ann From
+        <*! Ann From
 
 getGKeys ::
   NewEpochState era ->
@@ -783,6 +850,27 @@ instance
     encodeListLen 2
       <> toCBOR _delegationState -- encode delegation state first to improve sharing
       <> toCBOR _utxoState
+
+instance
+  ( Era era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromCBOR (Core.Value era),
+    FromSharedCBOR (Annotator (Core.TxOut era)),
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  FromSharedCBOR (Annotator (LedgerState era))
+  where
+  type
+    Share (Annotator (LedgerState era)) =
+      (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era)))
+  fromSharedPlusCBOR =
+    decodeRecordNamedT "LedgerState" (const 2) $ do
+      _delegationState <- fromSharedPlusCBOR
+      _utxoState' <- fromSharedLensCBOR _1
+      pure $ Annotator $ \fbs ->
+        let _utxoState = runAnnotator _utxoState' fbs
+        in LedgerState {_utxoState, _delegationState}
 
 instance
   ( Era era,

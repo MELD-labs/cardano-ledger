@@ -24,7 +24,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    encodeListLen,
+    encodeListLen, Annotator
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
 import qualified Cardano.Ledger.Core as Core
@@ -147,6 +147,27 @@ instance
           1 -> do
             a <- fromCBOR
             pure (2, DelegFailure a)
+          k -> invalidKey k
+      )
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "POOL" era))),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "DELEG" era))),
+    Typeable (Core.Script era)
+  ) =>
+  FromCBOR (Annotator (DelplPredicateFailure era))
+  where
+  fromCBOR =
+    decodeRecordSum
+      "PredicateFailure (DELPL era)"
+      ( \case
+          0 -> do
+            a <- fromCBOR
+            pure (2, fmap PoolFailure a)
+          1 -> do
+            a <- fromCBOR
+            pure (2, fmap DelegFailure a)
           k -> invalidKey k
       )
 

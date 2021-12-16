@@ -80,6 +80,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+import Data.Coders (Annotator)
 
 data DELEG era
 
@@ -245,6 +246,12 @@ instance
       14 -> do
         pure (1, MIRProducesNegativeUpdate)
       k -> invalidKey k
+
+instance
+  (Era era, Typeable (Core.Script era)) =>
+  FromCBOR (Annotator (DelegPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 delegationTransition ::
   ( Typeable era,

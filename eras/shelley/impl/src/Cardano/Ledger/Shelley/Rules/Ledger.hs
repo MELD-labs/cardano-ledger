@@ -26,7 +26,7 @@ where
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    encodeListLen,
+    encodeListLen, Annotator
   )
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
@@ -124,6 +124,24 @@ instance
   toCBOR = \case
     (UtxowFailure a) -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
     (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
+
+instance
+  ( FromCBOR (Annotator (PredicateFailure (Core.EraRule "DELEGS" era))),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOW" era))),
+    Era era
+  ) =>
+  FromCBOR (Annotator (LedgerPredicateFailure era))
+  where
+  fromCBOR =
+    decodeRecordSum "PredicateFailure (LEDGER era)" $
+      \case
+        0 -> do
+          a <- fromCBOR
+          pure (2, UtxowFailure <$> a)
+        1 -> do
+          a <- fromCBOR
+          pure (2, DelegsFailure <$> a)
+        k -> invalidKey k
 
 instance
   ( FromCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),

@@ -44,6 +44,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
+import Data.Coders (Annotator)
 
 data PPUP era
 
@@ -113,6 +114,12 @@ instance
     PPUpdateWrongEpoch ce e vp ->
       encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR vp
     PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR p
+
+instance
+  (Era era) =>
+  FromCBOR (Annotator (PpupPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 instance
   (Era era) =>

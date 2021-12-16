@@ -64,6 +64,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
+import Data.Coders (Annotator)
 
 data POOL (era :: Type)
 
@@ -170,6 +171,12 @@ instance
         s <- fromCBOR
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
+
+instance
+  (Era era) =>
+  FromCBOR (Annotator (PoolPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 poolDelegationTransition ::
   forall era.

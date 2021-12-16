@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
@@ -36,9 +37,9 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), Annotator)
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Crypto,
@@ -74,6 +75,7 @@ import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
+import Data.Coders (decodeAnnList)
 
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.
@@ -109,7 +111,7 @@ class
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    SerialisableData (ApplyTxError era),
+    AnnotatedData (ApplyTxError era),
     STS (Core.EraRule "LEDGER" era),
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
@@ -260,6 +262,14 @@ instance
   FromCBOR (ApplyTxError era)
   where
   fromCBOR = ApplyTxError <$> fromCBOR
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
+  ) =>
+  FromCBOR (Annotator (ApplyTxError era))
+  where
+  fromCBOR = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
 
 -- | Old 'applyTxs'
 applyTxs ::
