@@ -39,6 +39,8 @@ module Cardano.Ledger.Babbage.TxBody
         adHash,
         txnetworkid
       ),
+    Datum (..),
+    datumDatahash,
     inputs',
     collateral',
     collateralReturn',
@@ -68,6 +70,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Crypto.Hash
+import qualified Data.Text as T
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
@@ -202,29 +205,28 @@ viewTxOut ::
   forall era.
   Era era =>
   TxOut era ->
-  (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
+  (Addr (Crypto era), Core.Value era, Datum era)
+viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDatum bs c datum) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
-    dh = hashData datum
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
     let addr = decodeAddress28 stakeRef a b c d
-     in (addr, inject (fromCompact adaVal), SNothing)
+     in (addr, inject (fromCompact adaVal), NoDatum)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
     Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
     let addr = decodeAddress28 stakeRef a b c d
-     in (addr, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
+     in (addr, inject (fromCompact adaVal), DatumHash (decodeDataHash32 e f g h))
 viewTxOut (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
@@ -239,6 +241,18 @@ instance
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
+data Datum era
+  = NoDatum 
+  | DatumHash !(DataHash (Crypto era))
+  | Datum !(Data era)
+  deriving (Eq, Ord, Show)
+
+datumDatahash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDatahash = \case 
+  NoDatum -> SNothing
+  (DatumHash d) -> SJust d
+  (Datum d) -> SJust $ hashData d
+
 pattern TxOut ::
   forall era.
   ( Era era,
@@ -248,28 +262,29 @@ pattern TxOut ::
   ) =>
   Addr (Crypto era) ->
   Core.Value era ->
-  StrictMaybe (DataHash (Crypto era)) ->
+  Datum (era) ->
   TxOut era
 pattern TxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
-    TxOut (Addr network paymentCred stakeRef) vl SNothing
+    TxOut (Addr network paymentCred stakeRef) vl NoDatum
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
         TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
-    TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
+    TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
         Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
         TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
-    TxOut addr vl mdh =
+    TxOut addr vl d =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
-       in case mdh of
-            SNothing -> TxOutCompact' a v
-            SJust dh -> TxOutCompactDH' a v dh
+       in case d of
+            NoDatum -> TxOutCompact' a v
+            DatumHash dh -> TxOutCompactDH' a v dh
+            Datum d' -> TxOutCompactDatum a v d'
 
 {-# COMPLETE TxOut #-}
 
@@ -284,7 +299,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
+    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum
 
 -- TODO deprecate
 pattern TxOutCompactDH ::
@@ -298,7 +313,7 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
+    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . DatumHash
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
@@ -608,19 +623,12 @@ instance
           <$> fromCBOR
           <*> decodeNonNegative
       Just 3 ->
-        decodeBreakOr >>= \case
-          True -> do
-            a <- fromCBOR
-            b <- decodeNonNegative
-            c <- fromCBOR
-            pure $ TxOutCompactDatum a b <$> c
-          False ->
             fmap pure $
               TxOutCompactDH
                 <$> fromCBOR
                 <*> decodeNonNegative
                 <*> fromCBOR
-      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+      Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
   ( Era era,
@@ -672,11 +680,10 @@ encodeTxBodyRaw
       fromSJust (SJust x) = x
       fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
-{-# INLINE doubleFmap #-}
-
-{-# INLINE (<$$>) #-}
 doubleFmap, (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+{-# INLINE doubleFmap #-}
 doubleFmap = fmap . fmap
+{-# INLINE (<$$>) #-}
 (<$$>) = doubleFmap
 
 instance
