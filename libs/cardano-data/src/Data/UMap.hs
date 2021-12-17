@@ -235,12 +235,20 @@ instance Foldable (VMap coin cred pool ptr k) where
 foldl' :: (ans -> v -> ans) -> ans -> VMap coin cred pool ptr k v -> ans
 foldl' accum ans0 (Rewards (UnifiedMap tmap _)) = Map.foldl' accum2 ans0 tmap
   where
-    accum2 ans (Triple (SJust c) _ _) = accum ans c
+    -- accum2 ans (Triple (SJust c) _ _) = accum ans c
+    accum2 ans (TFFF c _ _) = accum ans c -- Tight loop here, so avoid the pattern
+    accum2 ans (TFFE c _) = accum ans c
+    accum2 ans (TFEF c _) = accum ans c
+    accum2 ans (TFEE c) = accum ans c
     accum2 ans _ = ans
 foldl' accum ans0 (Delegations (UnifiedMap tmap _)) = Map.foldl' accum2 ans0 tmap
   where
-    accum2 ans (Triple _ _ (SJust c)) = accum ans c
-    accum2 ans (Triple _ _ SNothing) = ans
+    -- accum2 ans (Triple _ _ (SJust p)) = accum ans p -- Don't use pattern Triple in tight loop.
+    accum2 ans (TFFF _ _ p) = accum ans p
+    accum2 ans (TFEF _ p) = accum ans p
+    accum2 ans (TEFF _ p) = accum ans p
+    accum2 ans (TEEF p) = accum ans p
+    accum2 ans _ = ans
 foldl' accum ans (Ptrs (UnifiedMap _ ptrmap)) = Map.foldl' accum ans ptrmap
 
 -- =======================================================

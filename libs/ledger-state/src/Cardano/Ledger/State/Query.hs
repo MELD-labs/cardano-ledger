@@ -33,7 +33,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Sharing
 import qualified Data.Text as T
-import Data.UMap (VMap (Delegations, Ptrs, Rewards), delView, ptrView, rewView, unUnify, unify)
+import Data.UMap (delView, ptrView, rewView, unify)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
@@ -93,14 +93,14 @@ insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves _irwd
   let irDeltaTreasury = Shelley.deltaTreasury _irwd
   dstateId <- insert $ DState (Enc _fGenDelegs) _genDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList (unUnify (Rewards _unified))) $ \(cred, c) -> do
+  forM_ (Map.toList (rewView _unified)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Reward dstateId credId c)
-  forM_ (Map.toList (unUnify (Delegations _unified))) $ \(cred, spKeyHash) -> do
+  forM_ (Map.toList (delView _unified)) $ \(cred, spKeyHash) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
     insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (unUnify (Ptrs _unified))) $ \(ptr, cred) -> do
+  forM_ (Map.toList (ptrView _unified)) $ \(ptr, cred) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Ptr dstateId credId ptr)
   forM_ (Map.toList (Shelley.iRReserves _irwd)) $ \(cred, c) -> do
@@ -819,7 +819,7 @@ loadLedgerStateWithSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
-    let stakeCredentials = unUnify (Shelley.rewards dstate)
+    let stakeCredentials = rewView (Shelley._unified dstate)
     m <- runConduitFold (sourceWithSharingUTxO stakeCredentials) txIxSharingKeyMap
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)
