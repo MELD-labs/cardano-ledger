@@ -35,13 +35,7 @@ instance Arbitrary MockTxIn where
 -- A simple type with a Split instance
 
 data SS = SS Int Word64
-  deriving (Eq, Show)
-
-instance Ord SS where
-  compare (SS i n) (SS j m) =
-    case compare i j of
-      EQ -> compare n m
-      other -> other
+  deriving (Eq, Ord, Show)
 
 instance Split SS where
   splitKey (SS n m) = (n, Key m 0 0 0)
@@ -86,8 +80,8 @@ maxKeyx x = case lookupMax x of
   Nothing -> True === True
   Just (k, _v) -> counterexample ("max=" ++ show k ++ "map=\n" ++ show x) (allKeyx (\x1 -> x1 <= k) x === True)
 
-mapWorksx :: SplitMap k Int -> Property
-mapWorksx x = allValx (== (99 :: Int)) (mapWithKey (\_key _x -> 99) x) === True
+mapWorksx :: SplitMap k Int -> Bool
+mapWorksx x = allValx (== (99 :: Int)) (mapWithKey (\_key _x -> 99) x)
 
 foldintersectS :: forall k. SplitMap k Int -> SplitMap k Int -> Property
 foldintersectS x y = foldOverIntersection (\ans _key u _v -> ans + u) 0 x y === foldlWithKey' (\ans _key u -> ans + u) 0 (intersection x y)
@@ -167,9 +161,10 @@ infix 4 %==%
 
 (%==%) :: (Split k, Eq k, Eq v, Show k, Show v) => SplitMap k v -> Map.Map k v -> Property
 (%==%) x y =
-  counterexample
-    ("\nkeymap\n" ++ show x ++ "\ndatamap\n" ++ show y)
-    (toList x === Map.toList y)
+  counterexample ("Invariant violated:\n" ++ show x) (valid x)
+    .&&. counterexample
+      ("\nkeymap\n" ++ show x ++ "\ndatamap\n" ++ show y)
+      (toList x === Map.toList y)
 
 type Test k = (Split k, Eq k, Show k, Ord k)
 
@@ -180,10 +175,16 @@ deleteSPLITDATA :: forall k v. (Test k, Eq v, Show v) => k -> [(k, v)] -> Proper
 deleteSPLITDATA k m = delete k (fromList m) %==% Map.delete k (Map.fromList m)
 
 unionSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
-unionSPLITDATA n m = union (fromList n) (fromList m) %==% Map.union (Map.fromList n) (Map.fromList m)
+unionSPLITDATA n m =
+  union (fromList n) (fromList m) %==% Map.union (Map.fromList n) (Map.fromList m)
 
-intersectSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
-intersectSPLITDATA n m = intersection (fromList n) (fromList m) %==% Map.intersection (Map.fromList n) (Map.fromList m)
+disjointSPLITDATA :: forall k v. Test k => [(k, v)] -> [(k, v)] -> Property
+disjointSPLITDATA n m =
+  disjoint (fromList n) (fromList m) === Map.disjoint (Map.fromList n) (Map.fromList m)
+
+intersectionSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
+intersectionSPLITDATA n m =
+  intersection (fromList n) (fromList m) %==% Map.intersection (Map.fromList n) (Map.fromList m)
 
 lookupSPLITDATA :: forall k v. (Test k, Eq v, Show v) => k -> [(k, v)] -> Property
 lookupSPLITDATA k m = lookup k (fromList m) === Map.lookup k (Map.fromList m)
@@ -221,7 +222,8 @@ splitMapEquivDataMap =
     [ testPropertyN 500 "insert" (insertSPLITDATA @SS @Int),
       testPropertyN 500 "delete" (deleteSPLITDATA @SS @Int),
       testPropertyN 500 "union" (unionSPLITDATA @SS @Int),
-      testPropertyN 500 "intersection" (intersectSPLITDATA @SS @Int),
+      testPropertyN 500 "intersection" (intersectionSPLITDATA @SS @Int),
+      testPropertyN 500 "disjoint" (disjointSPLITDATA @SS @Int),
       testPropertyN 500 "lookup" (lookupSPLITDATA @SS @Int),
       testPropertyN 500 "withoutKeys" (withoutSPLITDATA @SS @Int),
       testPropertyN 500 "restrictKeys" (restrictSPLITDATA @SS @Int),

@@ -703,7 +703,9 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
     outputPreserved
       SourceSignalTarget {target = (UTxOState {_utxo = UTxO uFull}, _)}
       SourceSignalTarget {target = (UTxOState {_utxo = UTxO uRestr}, _)} =
-        counterexample "non-disjoint" (uRestr `SplitMap.disjoint` irrelevantUTxO)
+        counterexample
+          (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
+          (uRestr `SplitMap.disjoint` irrelevantUTxO)
           .&&. uFull === (uRestr `SplitMap.union` irrelevantUTxO)
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO

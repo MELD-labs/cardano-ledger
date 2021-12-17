@@ -326,8 +326,8 @@ utxoTransition = do
 
   let refunded = Shelley.keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
-  let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
-  pure $! Shelley.updateUTxOState u txb (totalDeposits' Val.<-> refunded) ppup'
+  let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts Val.<-> refunded
+  pure $! Shelley.updateUTxOState u txb depositChange ppup'
 
 --------------------------------------------------------------------------------
 -- UTXO STS

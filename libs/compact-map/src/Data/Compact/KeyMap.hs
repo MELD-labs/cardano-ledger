@@ -237,12 +237,10 @@ singleton :: Key -> v -> KeyMap v
 singleton k v = insert k v Empty
 
 isNotEmpty :: KeyMap v -> Bool
-isNotEmpty Empty = False
-isNotEmpty _ = True
+isNotEmpty = not . isEmpty
 
 isEmpty :: KeyMap v -> Bool
-isEmpty Empty = True
-isEmpty _ = False
+isEmpty km = size km == 0
 
 instance Eq v => Eq (KeyMap v) where
   (==) x y = toList x == toList y

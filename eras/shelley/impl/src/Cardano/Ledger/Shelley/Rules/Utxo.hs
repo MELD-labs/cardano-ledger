@@ -433,7 +433,8 @@ utxoInductive = do
   let txCerts = toList $ getField @"certs" txb
   let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
   tellEvent $ TotalDeposits totalDeposits'
-  pure $! updateUTxOState u txb (totalDeposits' <-> refunded) ppup'
+  let depositChange = totalDeposits' <-> refunded
+  pure $! updateUTxOState u txb depositChange ppup'
 
 updateUTxOState ::
   (Era era, HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
