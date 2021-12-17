@@ -39,7 +39,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
-import Data.UMap (VMap (Delegations, Ptrs, Rewards), unUnify)
+import Data.UMap (delView, ptrView, rewView)
 import Numeric.Natural
 import Prettyprinter
 import Text.Printf
@@ -486,10 +486,10 @@ countDStateStats :: DState C -> DStateStats
 countDStateStats DState {..} =
   DStateStats
     { dssCredentialStaking =
-        statMapKeys (unUnify (Rewards _unified))
-          <> statMapKeys (unUnify (Delegations _unified))
-          <> statSet (range (unUnify (Ptrs _unified))),
-      dssDelegations = statFoldable (unUnify (Delegations _unified)),
+        statMapKeys (rewView _unified)
+          <> statMapKeys (delView _unified)
+          <> statSet (range (ptrView _unified)),
+      dssDelegations = statFoldable (delView _unified),
       dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys _fGenDelegs)
           <> statMapKeys (unGenDelegs _genDelegs),

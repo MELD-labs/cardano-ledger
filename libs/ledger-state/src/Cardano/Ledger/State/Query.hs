@@ -33,7 +33,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Sharing
 import qualified Data.Text as T
-import Data.UMap (VMap (Delegations, Ptrs, Rewards), unUnify, unify)
+import Data.UMap (VMap (Delegations, Ptrs, Rewards), delView, ptrView, rewView, unUnify, unify)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite

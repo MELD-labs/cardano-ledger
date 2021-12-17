@@ -19,6 +19,9 @@ module Data.UMap
     umInvariant,
     unView,
     unUnify,
+    rewView,
+    delView,
+    ptrView,
     zero,
     zeroMaybe,
     mapNext,
@@ -199,6 +202,15 @@ unUnify (Delegations (UnifiedMap tripmap _)) = Map.foldlWithKey' accum Map.empty
     accum ans k (Triple _ _ (SJust v)) = Map.insert k v ans
     accum ans _ _ = ans
 unUnify (Ptrs (UnifiedMap _ ptrmap)) = ptrmap
+
+rewView :: Ord cred => UMap coin cred pool ptr -> Map.Map cred coin
+rewView x = unUnify (Rewards x)
+
+delView :: Ord cred => UMap coin cred pool ptr -> Map.Map cred pool
+delView x = unUnify (Delegations x)
+
+ptrView :: Ord cred => UMap coin cred pool ptr -> Map.Map ptr cred
+ptrView x = unUnify (Ptrs x)
 
 instance Foldable (VMap coin cred pool ptr k) where
   foldMap f (Rewards (UnifiedMap tmap _)) = Map.foldlWithKey' accum mempty tmap

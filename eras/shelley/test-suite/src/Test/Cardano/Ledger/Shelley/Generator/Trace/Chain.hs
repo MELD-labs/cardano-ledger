@@ -246,7 +246,7 @@ registerGenesisStaking
               UM.unify
                 (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj $ sgsStake)
                 (Map.mapKeys KeyHashObj sgsStake)
-                (Map.empty)
+                (UM.ptrView (_unified (_dstate oldDPState)))
           }
 
       -- We consider pools as having been registered in slot 0

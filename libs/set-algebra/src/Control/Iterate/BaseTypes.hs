@@ -73,9 +73,6 @@ class Basic f where
   domain :: Ord k => f k v -> Set k
   range :: Ord v => f k v -> Set v
 
--- emptyc :: Ord k => f k v
--- emptyc = error ("emptyc only works on some types.")
-
 -- ===============================================================================================
 
 -- | BaseRep witnesses Basic types. I.e. those types that are instances of both Basic and Iter.
