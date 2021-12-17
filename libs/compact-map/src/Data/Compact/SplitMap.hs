@@ -96,16 +96,15 @@ insertNormForm _ KeyMap.Empty imap = SplitMap imap
 insertNormForm n kmap imap = SplitMap (IntMap.insert n kmap imap)
 
 intersectionWithKeyNormal ::
-     (IntMap.Key -> t1 -> t2 -> KeyMap v)
-  -> IntMap t1
-  -> IntMap t2
-  -> IntMap (KeyMap v)
+  (IntMap.Key -> t1 -> t2 -> KeyMap v) ->
+  IntMap t1 ->
+  IntMap t2 ->
+  IntMap (KeyMap v)
 intersectionWithKeyNormal f =
   let f' k x1 x2 =
         let keyMap = f k x1 x2
          in if KeyMap.isEmpty keyMap then Nothing else Just keyMap
    in IntMap.mergeWithKey f' (const IntMap.empty) (const IntMap.empty)
-
 
 empty :: forall k v. Split k => SplitMap k v
 empty = SplitMap IntMap.empty
@@ -228,7 +227,6 @@ intersectionWithKey combine (SplitMap imap1) (SplitMap imap2) =
     comb :: Int -> KeyMap u -> KeyMap v -> KeyMap w
     comb n = KeyMap.intersectionWithKey (combine . joinKey n)
 
-
 -- | The intersection of 'x' and 'y', where the 'combine' function computes the range.
 intersectionWith :: forall k u v w. (u -> v -> w) -> SplitMap k u -> SplitMap k v -> SplitMap k w
 intersectionWith combine = intersectionWithKey (const combine)
@@ -236,7 +234,6 @@ intersectionWith combine = intersectionWithKey (const combine)
 -- | The subset of 'x' with where the domain of 'x' appears in the domain of 'y'
 intersection :: forall k u v. SplitMap k u -> SplitMap k v -> SplitMap k u
 intersection = intersectionWithKey (\_ u _ -> u)
-
 
 -- | Like intersectionWithKey, except if the 'combine' function returns Nothing, the common
 --   key is NOT placed in the intersectionWhen result.

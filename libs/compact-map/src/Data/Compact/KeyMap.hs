@@ -98,12 +98,12 @@ import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Primitive.Mutable as MVP
 import Data.Word (Word64)
 import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
+import NoThunks.Class
 import Numeric (showIntAtBase)
 import Prettyprinter
 import qualified Prettyprinter.Internal as Pretty
 import System.Random.Stateful (Uniform (..))
 import Prelude hiding (lookup)
-import NoThunks.Class
 
 -- ==========================================================================
 -- bitsPerSegment, Segments, Paths. Breaking a Key into a sequence of small components
@@ -228,7 +228,6 @@ instance NoThunks v => NoThunks (KeyMap v) where
     Two _ km1 km2 -> noThunksInValues ctxt [km1, km2]
     BitmapIndexed _ arr -> noThunksInValues ctxt $ tolist arr
     Full arr -> noThunksInValues ctxt $ tolist arr
-
 
 empty :: KeyMap v
 empty = Empty

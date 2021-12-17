@@ -5,7 +5,6 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation
   )
 where
 
-import qualified Data.Compact.SplitMap as SplitMap
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.Shelley.API as S
@@ -17,6 +16,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
 import Control.State.Transition.Extended (TRC (..))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as StrictSeq

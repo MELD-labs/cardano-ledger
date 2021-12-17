@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Pretty where
 
-import qualified Data.Compact.SplitMap as SplitMap
 import Cardano.Chain.Common
   ( AddrAttributes (..),
     Address (..),
@@ -177,6 +176,7 @@ import Control.SetAlgebra (forwards)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)

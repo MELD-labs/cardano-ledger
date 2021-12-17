@@ -104,19 +104,6 @@ import Quiet
 
 -- ===============================================
 
--- instance
---   (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
---   HasExp (UTxO era) (SplitMap.SplitMap (TxIn crypto) out)
---   where
---   toExp (UTxO x) = Base SplitR x
-
--- instance
---   (CC.Crypto crypto, Crypto era ~ crypto, Core.TxOut era ~ out) =>
---   Embed (UTxO era) (SplitMap.SplitMap (TxIn crypto) out)
---   where
---   toBase (UTxO x) = x
---   fromBase = UTxO
-
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)}
   deriving (Generic, Semigroup)
@@ -129,9 +116,10 @@ deriving instance (Era era, NFData (Core.TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
   (Eq (Core.TxOut era), CC.Crypto (Crypto era)) => Eq (UTxO era)
+
 deriving newtype instance CC.Crypto (Crypto era) => Monoid (UTxO era)
 
-instance  (Era era, ToCBOR (Core.TxOut era)) => ToCBOR (UTxO era) where
+instance (Era era, ToCBOR (Core.TxOut era)) => ToCBOR (UTxO era) where
   toCBOR = encodeSplitMap toCBOR toCBOR . unUTxO
 
 instance

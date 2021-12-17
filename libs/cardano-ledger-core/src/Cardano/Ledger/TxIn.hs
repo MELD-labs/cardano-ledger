@@ -41,7 +41,7 @@ import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..), NFData, cborError)
 import qualified Cardano.Prelude as HW
 import Control.Monad (when)
-import Data.Compact.HashMap (Keyed(..))
+import Data.Compact.HashMap (Keyed (..))
 import Data.Compact.SplitMap as SMap
 import Data.Text as T (pack)
 import Data.Word (Word64)

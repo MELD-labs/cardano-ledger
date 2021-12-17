@@ -41,8 +41,8 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
-import qualified Data.Maybe as Maybe
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set

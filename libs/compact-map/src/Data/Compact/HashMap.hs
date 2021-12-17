@@ -5,7 +5,6 @@
 
 module Data.Compact.HashMap where
 
-import Data.Function (fix)
 import Cardano.Crypto.Hash.Class
   ( Hash,
     HashAlgorithm (SizeHash),
@@ -24,6 +23,7 @@ import Data.ByteString.Builder
 import qualified Data.ByteString.Lazy as BSL
 import Data.Compact.KeyMap (Key, KeyMap)
 import qualified Data.Compact.KeyMap as KM
+import Data.Function (fix)
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -83,25 +83,29 @@ hashToKey h
 -- uncommon case of non-standard hash size
 hashFromKey :: forall h a. HashAlgorithm h => Key -> Hash h a
 hashFromKey (KM.Key a b c d)
-  | n <= 32
-  , Just h <- hashFromBytes (BSL.toStrict (toLazyByteString build)) = h
+  | n <= 32,
+    Just h <- hashFromBytes (BSL.toStrict (toLazyByteString build)) =
+    h
   | otherwise = error $ "Unsupported hash size: " <> show n
   where
     bytesToWord64 =
       fix
-        (\loop acc i bytes ->
-           if i <= (0 :: Int)
-             then acc
-             else loop
-                    (word8 (fromIntegral (bytes .&. 0xff)) <> acc)
-                    (i - 1)
-                    (bytes `shiftR` 8))
+        ( \loop acc i bytes ->
+            if i <= (0 :: Int)
+              then acc
+              else
+                loop
+                  (word8 (fromIntegral (bytes .&. 0xff)) <> acc)
+                  (i - 1)
+                  (bytes `shiftR` 8)
+        )
         mempty
-    build | n <= 8 = bytesToWord64 r a
-          | n <= 16 = bytesToWord64 8 a <> bytesToWord64 r b
-          | n <= 24 = bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 r c
-          | otherwise =
-            bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 8 c <> bytesToWord64 r d
+    build
+      | n <= 8 = bytesToWord64 r a
+      | n <= 16 = bytesToWord64 8 a <> bytesToWord64 r b
+      | n <= 24 = bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 r c
+      | otherwise =
+        bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 8 c <> bytesToWord64 r d
     n = fromIntegral $ sizeHash (Proxy :: Proxy h)
     r = n - 8 * (n `quot` 8)
 
