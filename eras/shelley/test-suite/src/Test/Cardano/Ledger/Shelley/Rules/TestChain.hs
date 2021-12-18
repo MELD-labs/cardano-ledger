@@ -436,7 +436,8 @@ checkWithdrawlBound ::
   SourceSignalTarget (CHAIN era) ->
   Property
 checkWithdrawlBound SourceSignalTarget {source, signal, target} =
-  rewardDelta === withdrawals signal
+  counterexample "checkWithdrawlBound" $
+    rewardDelta === withdrawals signal
   where
     rewardDelta :: Coin
     rewardDelta =
@@ -469,8 +470,9 @@ utxoDepositsIncreaseByFeesWithdrawals ::
   SourceSignalTarget (CHAIN era) ->
   Property
 utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target} =
-  circulation target <-> circulation source
-    === withdrawals signal <-> txFees ledgerTr
+  counterexample "utxoDepositsIncreaseByFeesWithdrawals" $
+    circulation target <-> circulation source
+      === withdrawals signal <-> txFees ledgerTr
   where
     us = _utxoState . esLState . nesEs . chainNes
     circulation chainSt =
@@ -488,10 +490,12 @@ potsSumIncreaseWdrlsPerBlock ::
   SourceSignalTarget (CHAIN era) ->
   Property
 potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
-  potsSum target <-> potsSum source === withdrawals signal
+  counterexample
+    "potsSumIncreaseWdrlsPerBlock"
+    $ potsSum target <-> potsSum source === withdrawals signal
   where
     potsSum chainSt =
-      let (UTxOState {_utxo = u, _deposited = d, _fees = f}) =
+      let UTxOState {_utxo = u, _deposited = d, _fees = f} =
             _utxoState . esLState . nesEs . chainNes $ chainSt
        in Val.coin (balance u) <+> d <+> f
 
@@ -507,9 +511,10 @@ potsSumIncreaseWdrlsPerTx ::
   SourceSignalTarget (CHAIN era) ->
   Property
 potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map sumIncreaseWdrls $
-      sourceSignalTargets ledgerTr
+  counterexample "potsSumIncreaseWdrlsPerTx" $
+    conjoin $
+      map sumIncreaseWdrls $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     sumIncreaseWdrls :: SourceSignalTarget ledger -> Property
@@ -532,9 +537,10 @@ potsSumIncreaseByRewardsPerTx ::
   SourceSignalTarget (CHAIN era) ->
   Property
 potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map sumIncreaseRewards $
-      sourceSignalTargets ledgerTr
+  counterexample "potsSumIncreaseByRewardsPerTx" $
+    conjoin $
+      map sumIncreaseRewards $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     sumIncreaseRewards
@@ -562,11 +568,12 @@ potsRewardsDecreaseByWdrlsPerTx ::
   SourceSignalTarget (CHAIN era) ->
   Property
 potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map rewardsDecreaseByWdrls $
-      sourceSignalTargets ledgerTr
+  counterexample "potsRewardsDecreaseByWdrlsPerTx" $
+    conjoin $
+      map rewardsDecreaseByWdrls $
+        sourceSignalTargets ledgerTr
   where
-    rewardsSum = (foldl' (<+>) (Coin 0)) . _rewards . _dstate
+    rewardsSum = fold . _rewards . _dstate
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
@@ -602,9 +609,10 @@ preserveBalance ::
   SourceSignalTarget (CHAIN era) ->
   Property
 preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map createdIsConsumed $
-      sourceSignalTargets ledgerTr
+  counterexample "preserveBalance" $
+    conjoin $
+      map createdIsConsumed $
+        sourceSignalTargets ledgerTr
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
@@ -643,9 +651,10 @@ preserveBalanceRestricted ::
   SourceSignalTarget (CHAIN era) ->
   Property
 preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map createdIsConsumed $
-      sourceSignalTargets ledgerTr
+  counterexample "preserveBalanceRestricted" $
+    conjoin $
+      map createdIsConsumed $
+        sourceSignalTargets ledgerTr
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
@@ -674,9 +683,10 @@ preserveOutputsTx ::
   SourceSignalTarget (CHAIN era) ->
   Property
 preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map outputPreserved $
-      sourceSignalTargets ledgerTr
+  counterexample "preserveOutputsTx" $
+    conjoin $
+      map outputPreserved $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     outputPreserved SourceSignalTarget {target = (UTxOState {_utxo = UTxO utxo}, _), signal = tx} =
@@ -694,8 +704,12 @@ canRestrictUTxO ::
   SourceSignalTarget (CHAIN era) ->
   Property
 canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    zipWith outputPreserved (sourceSignalTargets ledgerTrFull) (sourceSignalTargets ledgerTrRestr)
+  counterexample "canRestrictUTxO" $
+    conjoin $
+      zipWith
+        outputPreserved
+        (sourceSignalTargets ledgerTrFull)
+        (sourceSignalTargets ledgerTrRestr)
   where
     (_, ledgerTrFull) = ledgerTraceFromBlock @era @ledger chainSt block
     (UTxO irrelevantUTxO, ledgerTrRestr) =
@@ -719,9 +733,10 @@ eliminateTxInputs ::
   SourceSignalTarget (CHAIN era) ->
   Property
 eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map inputsEliminated $
-      sourceSignalTargets ledgerTr
+  counterexample "eliminateTxInputs" $
+    conjoin $
+      map inputsEliminated $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     inputsEliminated SourceSignalTarget {target = (UTxOState {_utxo = (UTxO u')}, _), signal = tx} =
@@ -740,9 +755,10 @@ newEntriesAndUniqueTxIns ::
   SourceSignalTarget (CHAIN era) ->
   Property
 newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map newEntryPresent $
-      sourceSignalTargets ledgerTr
+  counterexample "newEntriesAndUniqueTxIns" $
+    conjoin $
+      map newEntryPresent $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     newEntryPresent
@@ -772,9 +788,10 @@ requiredMSigSignaturesSubset ::
   SourceSignalTarget (CHAIN era) ->
   Property
 requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = block} =
-  conjoin $
-    map signaturesSubset $
-      sourceSignalTargets ledgerTr
+  counterexample "requiredMSigSignaturesSubset" $
+    conjoin $
+      map signaturesSubset $
+        sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     signaturesSubset :: SourceSignalTarget ledger -> Property
@@ -784,7 +801,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
             all (existsReqKeyComb khs) (getField @"scriptWits" . getField @"wits" $ tx)
 
     existsReqKeyComb keyHashes msig =
-      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
+      any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
     keyHashSet :: Core.Tx era -> Set (KeyHash 'Witness (Crypto era))
     keyHashSet tx_ =
       Set.map witKeyHash (getField @"addrWits" . getField @"wits" $ tx_)
@@ -799,7 +816,8 @@ noDoubleSpend ::
   SourceSignalTarget (CHAIN era) ->
   Property
 noDoubleSpend SourceSignalTarget {signal} =
-  [] === (getDoubleInputs txs)
+  counterexample "noDoubleSpend" $
+    [] === getDoubleInputs txs
   where
     txs = toList $ (fromTxSeq @era . bbody) signal
 
@@ -809,7 +827,7 @@ noDoubleSpend SourceSignalTarget {signal} =
     lookForDoubleSpends :: Core.Tx era -> [Core.Tx era] -> [(Core.Tx era, [Core.Tx era])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
-      if null doubles then [] else [(tx_j, doubles)]
+      [(tx_j, doubles) | not (null doubles)]
       where
         doubles =
           if hasFailedScripts tx_j
@@ -839,7 +857,7 @@ withdrawals (UnserialisedBlock _ txseq) =
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ (fromTxSeq @era txseq)
+    $ fromTxSeq @era txseq
 
 txFees ::
   forall era ledger.
@@ -865,14 +883,14 @@ nonNegativeDeposits ::
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
       UTxOState {_deposited = d} = (_utxoState . esLState) es
-   in (d >= mempty) === True
+   in counterexample ("nonNegativeDeposits: " ++ show d) (d >= mempty)
 
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
 feesNonDecreasing ::
   SourceSignalTarget (CHAIN era) ->
   Property
 feesNonDecreasing SourceSignalTarget {source, target} =
-  property $
+  counterexample ("feesNonDecreasing: " <> show (fees_ source) <> " <= " <> show (fees_ target)) $
     fees_ source <= fees_ target
   where
     fees_ chainSt =

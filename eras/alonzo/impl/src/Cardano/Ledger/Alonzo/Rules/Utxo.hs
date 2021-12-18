@@ -351,7 +351,7 @@ utxoTransition = do
   {-   txins txb ≠ ∅   -}
   not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO
 
-  {-   feesOKp p tx utxo   -}
+  {-   feesOK pp tx utxo   -}
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
 
   {-   (txins txb) ∪ (collateral txb)  ⊆ dom utxo   -}

@@ -79,7 +79,7 @@ hashToKey h
     d = indexWord64 3
     n = sizeHash (Proxy :: Proxy h)
 
--- | Convert any Key to a hash that is at most 32 bytes in length. Slow, buty
+-- | Convert any Key to a hash that is at most 32 bytes in length. Slow, but
 -- uncommon case of non-standard hash size
 hashFromKey :: forall h a. HashAlgorithm h => Key -> Hash h a
 hashFromKey (KM.Key a b c d)

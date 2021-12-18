@@ -428,7 +428,7 @@ genNextDelta
         changeAmount = getChangeAmount change
         minAda = getField @"_minUTxOValue" pparams
      in if remainingFee <= Coin 0 -- we've paid for all the fees
-          then (pure delta) -- we're done
+          then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
 
             if remainingFee <= (changeAmount <-> minAda)
