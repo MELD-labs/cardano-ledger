@@ -500,7 +500,9 @@ instance (Split k, Eq k, Eq v) => Eq (SplitMap k v) where
   x == y = toList x == toList y
 
 instance (Split k, Show k, Show v) => Show (SplitMap k v) where
-  show x = show (ppSplitMap x)
+  showsPrec d m =
+    showParen (d > 10) $
+      showString "fromList " . shows (toList m)
 
 ppSplitMap :: forall k v. Show v => SplitMap k v -> PDoc
 ppSplitMap (SplitMap imap) = ppList ppitem (IntMap.toList imap)

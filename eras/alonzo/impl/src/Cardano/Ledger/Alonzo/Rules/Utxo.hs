@@ -260,12 +260,12 @@ feesOK ::
   Core.Tx era ->
   UTxO era ->
   Rule (AlonzoUTXO era) 'Transition ()
-feesOK pp tx (UTxO m) = do
+feesOK pp tx (UTxO utxo) = do
   let txb = getField @"body" tx
       theFee = getField @"txfee" txb -- Coin supplied to pay fees
       collateral = getField @"collateral" txb -- Inputs allocated to pay theFee
       -- restrict Utxo to those inputs we use to pay fees.
-      utxoCollateral = m `SplitMap.withoutKeysSet` collateral
+      utxoCollateral = utxo `SplitMap.restrictKeysSet` collateral
       bal = balance @era (UTxO utxoCollateral)
       minimumFee = minfee @era pp tx
       collPerc = getField @"_collateralPercentage" pp

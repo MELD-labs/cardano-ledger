@@ -912,7 +912,6 @@ consumed ::
   Core.Value era
 consumed pp (UTxO u) tx =
   Set.foldl' lookupAddTxOut mempty (txins @era tx)
-    -- balance @era (eval (txins @era tx ◁ u))
     <> Val.inject (refunds <+> withdrawals)
   where
     lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ SplitMap.lookup txin u
