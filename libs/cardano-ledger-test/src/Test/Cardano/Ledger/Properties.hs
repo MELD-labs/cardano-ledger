@@ -447,7 +447,7 @@ genTxOut val = do
 genUTxO :: GenRS (UTxO A)
 genUTxO = do
   NonEmpty ins <- lift $ resize 10 arbitrary
-  UTxO . SplitMap.fromMap <$> sequence (Map.fromSet (const genOut) (Set.fromList ins))
+  UTxO <$> sequence (SplitMap.fromSet (const genOut) (Set.fromList ins))
   where
     genOut = genTxOut =<< lift genPositiveVal
 
@@ -567,7 +567,7 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxo) = do
   collaterals <-
     go collateralAddresses Map.empty (Coin 0) $
       SplitMap.toMap $ SplitMap.filter spendOnly utxo
-  pure (UTxO (SplitMap.union utxo (SplitMap.fromMap collaterals)), collaterals)
+  pure (UTxO (Map.foldrWithKey' SplitMap.insert utxo collaterals), collaterals)
   where
     spendOnly (TxOut (Addr _ (ScriptHashObj _) _) _ _) = False
     spendOnly (TxOut (Addr _ _ (StakeRefBase (ScriptHashObj _))) _ _) = False

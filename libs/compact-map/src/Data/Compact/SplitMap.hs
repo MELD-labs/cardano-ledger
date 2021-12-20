@@ -58,14 +58,17 @@ instance Split k => Exts.IsList (SplitMap k v) where
   {-# INLINE toList #-}
 
 instance Split k => Foldable (SplitMap k) where
-  foldr comb ansIntMap (SplitMap imap) = IntMap.foldr combKeyMap ansIntMap imap
+  foldr f ansIntMap (SplitMap imap) = IntMap.foldr fKeyMap ansIntMap imap
     where
-      combKeyMap kmap ans1 = KeyMap.foldWithDescKey (const comb) ans1 kmap
+      fKeyMap kmap ans1 = F.foldr f ans1 kmap
   null = null
   length = size
   foldl' = foldl'
   foldr' = foldr'
   toList = elems
+
+instance Split k => Traversable (SplitMap k) where
+  traverse f (SplitMap imap) = SplitMap <$> traverse (traverse f) imap
 
 valid :: SplitMap k v -> Bool
 valid (SplitMap im) =
@@ -175,6 +178,18 @@ mapWithKey f (SplitMap imap) = SplitMap (IntMap.mapWithKey g imap)
   where
     g :: Int -> KeyMap v -> KeyMap u
     g n kmap = KeyMap.mapWithKey (f . joinKey n) kmap
+
+traverseWithKey ::
+  forall f k v u.
+  Applicative f =>
+  (k -> v -> f u) ->
+  SplitMap k v ->
+  f (SplitMap k u)
+traverseWithKey f (SplitMap imap) =
+  SplitMap <$> IntMap.traverseWithKey g imap
+  where
+    g :: Int -> KeyMap v -> f (KeyMap u)
+    g n kmap = KeyMap.traverseWithKey (f . joinKey n) kmap
 
 instance Functor (SplitMap k) where
   fmap f x = mapWithKey (\_ v -> f v) x

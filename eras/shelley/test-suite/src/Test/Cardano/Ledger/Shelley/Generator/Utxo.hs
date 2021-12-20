@@ -18,6 +18,8 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo
     showBalance,
     encodedLen,
     myDiscard,
+    pickRandomFromMap,
+    pickRandomFromSplitMap,
   )
 where
 
@@ -653,11 +655,13 @@ genIndices k (l', u')
           then go n res acc
           else go (n - 1) (i : res) $ IntSet.insert i acc
 
--- NOTE: we can't use the same approach as we do for `Map`, because `SplitMap`
--- does not implement integer indexing (a.k.a. elemAt).
 -- | Select @n@ random key value pairs from the supplied map. The order of keys
 -- with respect to each other will be the same as in `SplitMap.toList`, so you
 -- need to call `QC.shuffle` if order needs to be randomized as well.
+--
+-- NOTE: we can't use the same approach as we do for `Map.Map` in
+-- `pickRandomFromMap`, because `SplitMap.SplitMap` does not implement integer
+-- indexing (a.k.a. elemAt).
 pickRandomFromSplitMap :: Int -> SplitMap.SplitMap a b -> Gen [(a, b)]
 pickRandomFromSplitMap n sp = do
   (_, ixs) <- genIndices (min (max 0 n) sz) (0, sz - 1)
@@ -678,9 +682,9 @@ pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
     go n !acc !m
       | n <= 0 = pure acc
       | otherwise = do
-          i <- QC.choose (0, n - 1)
-          let (k, y) = Map.elemAt i m
-          go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
+        i <- QC.choose (0, n - 1)
+        let (k, y) = Map.elemAt i m
+        go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
 
 mkScriptWits ::
   forall era.

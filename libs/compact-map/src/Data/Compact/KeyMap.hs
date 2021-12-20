@@ -25,6 +25,7 @@ module Data.Compact.KeyMap
     insertWithKey,
     delete,
     mapWithKey,
+    traverseWithKey,
     restrictKeys,
     withoutKeys,
     intersection,
@@ -563,6 +564,23 @@ mapWithKey f (Full arr) = Full (fmap (mapWithKey f) arr)
 
 instance Functor KeyMap where
   fmap f x = mapWithKey (\_ v -> f v) x
+
+instance Foldable KeyMap where
+  length = size
+  foldr f = foldWithDescKey (const f)
+
+traverseWithKey :: Applicative f => (Key -> a -> f b) -> KeyMap a -> f (KeyMap b)
+traverseWithKey f = \case
+  Empty -> pure Empty
+  Leaf k2 v -> Leaf k2 <$> f k2 v
+  One i x -> One i <$> traverseWithKey f x
+  Two bm x0 x1 -> Two bm <$> traverseWithKey f x0 <*> traverseWithKey f x1
+  BitmapIndexed bm arr ->
+    BitmapIndexed bm <$> traverse (traverseWithKey f) arr
+  Full arr -> Full <$> traverse (traverseWithKey f) arr
+
+instance Traversable KeyMap where
+  traverse f = traverseWithKey (const f)
 
 -- =========================================================
 -- UnionWith
