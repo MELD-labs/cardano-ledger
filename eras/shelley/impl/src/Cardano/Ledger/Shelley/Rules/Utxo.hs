@@ -446,8 +446,8 @@ updateUTxOState ::
 updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
   let UTxO utxo = _utxo
       utxoAdd = txouts txb -- These will be inserted into the UTxO
-      utxoDel = utxo `SplitMap.restrictKeysSet` txins txb
-      newUTxO = (utxo `SplitMap.withoutKeysSet` txins txb) `SplitMap.union` unUTxO utxoAdd
+      (utxoWithout, utxoDel) = SplitMap.extractKeysSet utxo (txins txb)
+      newUTxO = utxoWithout `SplitMap.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState
         { _utxo = UTxO newUTxO,
