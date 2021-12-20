@@ -206,7 +206,6 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 newUTxO ::
   forall era.
   ( UsesTxBody era,
-    UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.TxBody era ->
@@ -218,10 +217,11 @@ newUTxO txb cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = _utxoState ls
-    utxo = SplitMap.toMap $ unUTxO $ _utxo utxoSt
+    utxo = unUTxO $ _utxo utxoSt
     utxoAdd = txouts @era txb
-    utxoDel = UTxO $ SplitMap.fromMap $ eval (txins @era txb ◁ utxo)
-    utxo' = UTxO $ SplitMap.fromMap $ eval ((txins @era txb ⋪ utxo) ∪ SplitMap.toMap (unUTxO utxoAdd))
+    (utxoWithout, utxoToDel) = SplitMap.extractKeysSet utxo (txins @era txb)
+    utxoDel = UTxO utxoToDel
+    utxo' = UTxO (utxoWithout `SplitMap.union` unUTxO utxoAdd)
     sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
     ls' = ls {_utxoState = utxoSt'}

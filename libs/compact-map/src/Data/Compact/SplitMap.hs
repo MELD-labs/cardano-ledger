@@ -365,6 +365,17 @@ foldrWithKey' comb ans0 (SplitMap imap) = IntMap.foldrWithKey' comb2 ans0 imap
 -- These 'restrictKeys' functions assume the structure holding the 'good' keys is small
 -- An alternate approach is to use cross-type 'intersection' operations
 
+-- | Partition the SplitMap according to keys in the Set. This is equivalent to:
+--
+-- > extractKeysSet m s === (withoutKeysSet m s, restrictKeysSet m s)
+extractKeysSet :: forall k a. Split k => SplitMap k a -> Set k -> (SplitMap k a, SplitMap k a)
+extractKeysSet sm = Set.foldl' f (sm, empty)
+  where
+    f acc@(!without, !restrict) k =
+      case lookup k without of
+        Nothing -> acc
+        Just v -> (delete k without, insert k v restrict)
+
 restrictKeysSet :: forall k a. SplitMap k a -> Set k -> SplitMap k a
 restrictKeysSet splitmap@(SplitMap _) = Set.foldl' comb (SplitMap IntMap.empty)
   where

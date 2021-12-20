@@ -86,6 +86,10 @@ mapWorksx x = allValx (== (99 :: Int)) (mapWithKey (\_key _x -> 99) x)
 foldintersectS :: forall k. SplitMap k Int -> SplitMap k Int -> Property
 foldintersectS x y = foldOverIntersection (\ans _key u _v -> ans + u) 0 x y === foldlWithKey' (\ans _key u -> ans + u) 0 (intersection x y)
 
+withoutRestrictExtractS :: (Eq k, Split k, Show k) => SplitMap k Int -> Set k -> Property
+withoutRestrictExtractS m domset =
+  extractKeysSet m domset === (withoutKeysSet m domset, restrictKeysSet m domset)
+
 withoutRestrictS :: (Eq k, Split k, Show k) => SplitMap k Int -> Set k -> Property
 withoutRestrictS m domset = union (withoutKeysSet m domset) (restrictKeysSet m domset) === m
 
@@ -146,6 +150,7 @@ splitIsMapTests =
       testProperty "lookupMax finds the largest key" (maxKeyx @SS @Int),
       testProperty "(mapWithKey f) applies 'f' to every value" (mapWorksx @MockTxIn),
       testProperty "foldOverIntersection folds over the intersection" (foldintersectS @MockTxIn),
+      testProperty "extractKeysSet = restrictKeysSet + withoutKeysSet" (withoutRestrictExtractS @MockTxIn),
       testProperty "restrictKeysSet and withoutKeysSet partition a KeyMap" (withoutRestrictS @MockTxIn),
       testProperty "restrictKeysMap and withoutKeysMap partition a KeyMap" (withoutRestrictM @MockTxIn),
       testProperty "restrictKeysSplit and withoutKeysSplit partition a KeyMap" (withoutRestrictSp @MockTxIn),
