@@ -265,6 +265,7 @@ feesOK pp tx (UTxO utxo) = do
       theFee = getField @"txfee" txb -- Coin supplied to pay fees
       collateral = getField @"collateral" txb -- Inputs allocated to pay theFee
       -- restrict Utxo to those inputs we use to pay fees.
+      -- (collateral ◁ utxo)
       utxoCollateral = utxo `SplitMap.restrictKeysSet` collateral
       bal = balance @era (UTxO utxoCollateral)
       minimumFee = minfee @era pp tx

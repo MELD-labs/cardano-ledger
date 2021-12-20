@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo
   ( genTx,
     Delta (..),
     showBalance,
-    getNRandomPairs,
     encodedLen,
     myDiscard,
   )
@@ -76,9 +75,9 @@ import Cardano.Ledger.Shelley.Tx (TxIn (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
-    balance,
     makeWitnessesFromScriptKeys,
     makeWitnessesVKey,
+    sumTxOutValue,
   )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
@@ -87,7 +86,8 @@ import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Either as Either (partitionEithers)
-import Data.List (foldl', nub)
+import qualified Data.IntSet as IntSet
+import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
@@ -619,27 +619,68 @@ converge
 ruffle :: Int -> [a] -> Gen [a]
 ruffle _ [] = pure []
 ruffle k items = do
-  indices <- nub <$> QC.vectorOf k pickIndex
+  (indices, _) <- genIndices k (0, length itemsV - 1)
   pure $ map (itemsV V.!) indices
   where
     itemsV = V.fromList items
-    pickIndex = QC.choose (0, length itemsV - 1)
 
--- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
-getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen [(k, t)]
-getNRandomPairs 0 _ = pure []
-getNRandomPairs num m =
-  let n = Map.size m
-   in if n == 0
-        then pure []
-        else
-          ( do
-              i <- QC.choose (0, n - 1)
-              let (k, y) = Map.elemAt i m
-                  m2 = Map.delete k m
-              ys <- getNRandomPairs (num - 1) m2
-              pure ((k, y) : ys)
-          )
+-- | Generate @n@ number of unique `Int`s in the supplied range.
+genIndices :: Int -> (Int, Int) -> Gen ([Int], IntSet.IntSet)
+genIndices k (l', u')
+  | k < 0 || u - l + 1 < k =
+    error $
+      "Cannot generate "
+        ++ show k
+        ++ " indices in the range ["
+        ++ show l
+        ++ ", "
+        ++ show u
+        ++ "]"
+  | u - l < k `div` 2 = do
+    xs <- take k <$> QC.shuffle [l .. u]
+    pure (xs, IntSet.fromList xs)
+  | otherwise = go k [] mempty
+  where
+    (l, u) =
+      if l' <= u'
+        then (l', u')
+        else (u', l')
+    go n !res !acc
+      | n <= 0 = pure (res, acc)
+      | otherwise = do
+        i <- QC.choose (l, u)
+        if IntSet.member i acc
+          then go n res acc
+          else go (n - 1) (i : res) $ IntSet.insert i acc
+
+-- NOTE: we can't use the same approach as we do for `Map`, because `SplitMap`
+-- does not implement integer indexing (a.k.a. elemAt).
+-- | Select @n@ random key value pairs from the supplied map. The order of keys
+-- with respect to each other will be the same as in `SplitMap.toList`, so you
+-- need to call `QC.shuffle` if order needs to be randomized as well.
+pickRandomFromSplitMap :: Int -> SplitMap.SplitMap a b -> Gen [(a, b)]
+pickRandomFromSplitMap n sp = do
+  (_, ixs) <- genIndices (min (max 0 n) sz) (0, sz - 1)
+  case SplitMap.foldrWithKey' pickFromIndex ([], 0, IntSet.toAscList ixs) sp of
+    (acc, _, _) -> pure acc
+  where
+    sz = SplitMap.size sp
+    pickFromIndex _k _v res@(_acc, _i, []) = res
+    pickFromIndex k v (!acc, i, x : xs)
+      | i == x = ((k, v) : acc, i + 1, xs)
+      | otherwise = (acc, i + 1, x : xs)
+
+-- | Select @n@ random key value pairs from the supplied map. Order of keys with
+-- respect to each other will also be random, i.e. not sorted.
+pickRandomFromMap :: Int -> Map.Map k t -> Gen [(k, t)]
+pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
+  where
+    go n !acc !m
+      | n <= 0 = pure acc
+      | otherwise = do
+          i <- QC.choose (0, n - 1)
+          let (k, y) = Map.elemAt i m
+          go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
 
 mkScriptWits ::
   forall era.
@@ -760,21 +801,20 @@ genInputs ::
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
-  selectedUtxo <- getNRandomPairs numInputs (SplitMap.toMap utxo)
-
-  let (inputs, witnesses) = unzip (witnessedInput <$> selectedUtxo)
+  selectedUtxo <- pickRandomFromSplitMap numInputs utxo
+  let (inputs, witnesses) = unzip (fmap witnessedInput <$> selectedUtxo)
   return
     ( inputs,
-      balance (UTxO (SplitMap.fromList selectedUtxo) :: UTxO era),
+      sumTxOutValue @era (snd <$> selectedUtxo),
       Either.partitionEithers witnesses
     )
   where
-    witnessedInput (input, output) =
+    witnessedInput output =
       case getField @"address" output of
         addr@(Addr _ (KeyHashObj _) _) ->
-          (input, Left . asWitness $ findPayKeyPairAddr @era addr keyHashMap)
+          Left . asWitness $ findPayKeyPairAddr @era addr keyHashMap
         addr@(Addr _ (ScriptHashObj _) _) ->
-          (input, Right $ findPayScriptFromAddr @era addr payScriptMap)
+          Right $ findPayScriptFromAddr @era addr payScriptMap
         _ -> error "unsupported address"
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
@@ -895,7 +935,7 @@ genPtrAddrs ds addrs = do
   let pointers = forwards (_ptrs ds)
 
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
-  pointerList <- map fst <$> getNRandomPairs n pointers
+  pointerList <- map fst <$> pickRandomFromMap n pointers
 
   let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
 

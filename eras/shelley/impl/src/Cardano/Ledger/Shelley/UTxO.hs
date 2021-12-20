@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.UTxO
     txouts,
     txup,
     balance,
+    sumTxOutValue,
     totalDeposits,
     makeWitnessVKey,
     makeWitnessesVKey,
@@ -80,7 +81,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.TxIn as Core (txid)
-import Cardano.Ledger.Val (zero, (<+>), (<×>))
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Data.Coders (decodeSplitMap, encodeSplitMap)
@@ -230,9 +231,15 @@ balance ::
   Era era =>
   UTxO era ->
   Core.Value era
-balance (UTxO utxo) = SplitMap.foldl' addTxOuts zero utxo
-  where
-    addTxOuts !b out = getField @"value" out <+> b
+balance = sumTxOutValue . unUTxO
+
+-- | Sum all the value in TxOut
+sumTxOutValue ::
+  forall era f.
+  (Foldable f, Era era) =>
+  f (Core.TxOut era) ->
+  Core.Value era
+sumTxOutValue = foldMap (getField @"value")
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates

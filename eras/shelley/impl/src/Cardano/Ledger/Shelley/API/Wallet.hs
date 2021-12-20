@@ -591,7 +591,7 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
   where
     (UTxOState u deposits fees_ _ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
-    rewards_ = fold (Map.elems (_rewards ds))
+    rewards_ = fold (_rewards ds)
     coins = Val.coin $ balance u
 
 -- | Calculate the total ada in the epoch state
