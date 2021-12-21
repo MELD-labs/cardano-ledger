@@ -379,7 +379,9 @@ utxoInductive = do
       txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins @era txb)
+  {- badInputs = txins txb ➖ dom utxo -}
+  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins txb)
+  {- txins txb ⊆ dom utxo -}
   Set.null badInputs ?! BadInputsUTxO badInputs
 
   ni <- liftSTS $ asks networkId
@@ -447,7 +449,9 @@ updateUTxOState ::
 updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
   let UTxO utxo = _utxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
+      {- utxoDel  = txins txb ◁ utxo -}
       !(!utxoWithout, !utxoDel) = SplitMap.extractKeysSet utxo (txins txb)
+      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `SplitMap.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState

@@ -265,6 +265,8 @@ scriptsNotValidateTransition = do
               ]
           )
           ()
+      {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
+      {- utxoDel  = getField @"collateral" txb ◁ utxo -}
       !(!utxoKeep, !utxoDel) =
         SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
   pure

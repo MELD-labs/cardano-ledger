@@ -911,6 +911,7 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp (UTxO u) tx =
+  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
   Set.foldl' lookupAddTxOut mempty (txins @era tx)
     <> Val.inject (refunds <+> withdrawals)
   where
@@ -1264,7 +1265,7 @@ smartUTxOState utxo c1 c2 st =
     c1
     c2
     st
-    (updateStakeDistribution (IStake Map.empty Map.empty) (UTxO SplitMap.empty) utxo)
+    (updateStakeDistribution mempty mempty utxo)
 
 -- ==============================
 
@@ -1665,7 +1666,7 @@ instance
   (Default (State (Core.EraRule "PPUP" era)), CC.Crypto (Crypto era)) =>
   Default (UTxOState era)
   where
-  def = UTxOState (UTxO SplitMap.empty) (Coin 0) (Coin 0) def (IStake mempty Map.empty)
+  def = UTxOState mempty mempty mempty def mempty
 
 instance
   (Default (LedgerState era), Default (Core.PParams era)) =>

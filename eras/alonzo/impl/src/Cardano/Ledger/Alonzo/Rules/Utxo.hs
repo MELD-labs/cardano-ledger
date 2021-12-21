@@ -355,8 +355,9 @@ utxoTransition = do
   {-   feesOK pp tx utxo   -}
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
 
-  {-   (txins txb) ∪ (collateral txb)  ⊆ dom utxo   -}
+  {- badInputs = (txins txb ∪ collateral txb) ➖ dom utxo -}
   let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) inputsAndCollateral
+  {-   (txins txb) ∪ (collateral txb) ⊆ dom utxo   -}
   Set.null badInputs ?! BadInputsUTxO badInputs
 
   {-   consumedpp utxo txb = producedpp poolParams txb    -}
@@ -364,7 +365,7 @@ utxoTransition = do
       produced_ = Shelley.produced @era pp (`Map.notMember` stakepools) txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
-  {-   adaID  ∉ supp mint tx   -}
+  {-   adaID ∉ supp mint tx   -}
   -- Check that the mint field does not try to mint ADA.
   -- Here in the implementation, we store the adaId policyID in the coin field of the value.
   Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
