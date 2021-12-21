@@ -265,16 +265,13 @@ scriptsNotValidateTransition = do
               ]
           )
           ()
-      moveOver c acc@(UTxO del, UTxO keep) =
-        case SplitMap.lookup c keep of
-          Just txOut -> (UTxO (SplitMap.insert c txOut del), UTxO (SplitMap.delete c keep))
-          Nothing -> acc
-      (utxoDel, utxoKeep) = foldr' moveOver (mempty, utxo) (getField @"collateral" txb)
-  pure $
-    us
-      { _utxo = utxoKeep,
-        _fees = fees <> Val.coin (balance utxoDel),
-        _stakeDistro = updateStakeDistribution (_stakeDistro us) utxoDel mempty
+      !(!utxoKeep, !utxoDel) =
+        SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
+  pure
+    $! us
+      { _utxo = UTxO utxoKeep,
+        _fees = fees <> Val.coin (balance (UTxO utxoDel)),
+        _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) mempty
       }
 
 data TagMismatchDescription
