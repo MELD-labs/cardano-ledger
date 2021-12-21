@@ -73,7 +73,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -108,7 +108,7 @@ import Cardano.Protocol.TPraos.BHeader
     prevHashToNonce,
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫), (◁))
+import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋫))
 import Control.State.Transition (STS (State))
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (fold)
