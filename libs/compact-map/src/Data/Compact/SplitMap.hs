@@ -371,10 +371,13 @@ foldrWithKey' comb ans0 (SplitMap imap) = IntMap.foldrWithKey' comb2 ans0 imap
 extractKeysSet :: forall k a. Split k => SplitMap k a -> Set k -> (SplitMap k a, SplitMap k a)
 extractKeysSet sm = Set.foldl' f (sm, empty)
   where
-    f acc@(!without, !restrict) k =
+    f acc@(without, restrict) k =
       case lookup k without of
         Nothing -> acc
-        Just v -> (delete k without, insert k v restrict)
+        Just v ->
+          let !without' = delete k without
+              !restrict' = insert k v restrict
+           in (without', restrict')
 
 restrictKeysSet :: forall k a. SplitMap k a -> Set k -> SplitMap k a
 restrictKeysSet splitmap@(SplitMap _) = Set.foldl' comb (SplitMap IntMap.empty)

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -445,8 +446,8 @@ updateUTxOState ::
   UTxOState era
 updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
   let UTxO utxo = _utxo
-      utxoAdd = txouts txb -- These will be inserted into the UTxO
-      (utxoWithout, utxoDel) = SplitMap.extractKeysSet utxo (txins txb)
+      !utxoAdd = txouts txb -- These will be inserted into the UTxO
+      !(!utxoWithout, !utxoDel) = SplitMap.extractKeysSet utxo (txins txb)
       newUTxO = utxoWithout `SplitMap.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState
