@@ -70,7 +70,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Crypto.Hash
-import qualified Data.Text as T
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
@@ -122,6 +121,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
+import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
@@ -242,13 +242,13 @@ instance
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 data Datum era
-  = NoDatum 
+  = NoDatum
   | DatumHash !(DataHash (Crypto era))
   | Datum !(Data era)
   deriving (Eq, Ord, Show)
 
 datumDatahash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
-datumDatahash = \case 
+datumDatahash = \case
   NoDatum -> SNothing
   (DatumHash d) -> SJust d
   (Datum d) -> SJust $ hashData d
@@ -623,11 +623,11 @@ instance
           <$> fromCBOR
           <*> decodeNonNegative
       Just 3 ->
-            fmap pure $
-              TxOutCompactDH
-                <$> fromCBOR
-                <*> decodeNonNegative
-                <*> fromCBOR
+        fmap pure $
+          TxOutCompactDH
+            <$> fromCBOR
+            <*> decodeNonNegative
+            <*> fromCBOR
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
