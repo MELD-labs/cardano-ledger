@@ -66,7 +66,7 @@ import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
-import Data.Foldable (foldr', toList)
+import Data.Foldable (toList)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
