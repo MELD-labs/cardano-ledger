@@ -317,18 +317,13 @@ scriptsNeeded ::
 scriptsNeeded u tx =
   scriptHashes
     `Set.union` Set.fromList
-      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
-          Map.keys withdrawals
-      )
+      [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
     `Set.union` Set.fromList
-      ( Maybe.mapMaybe
-          scriptStakeCred
-          (filter requiresVKeyWitness certificates)
-      )
+      [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
     `Set.union` getField @"minted" txbody -- This might be Set.empty in some Eras.
   where
     txbody = getField @"body" tx
-    withdrawals = unWdrl (getField @"wdrls" txbody)
+    withdrawals = Map.keys (unWdrl (getField @"wdrls" txbody))
     scriptHashes = txinsScriptHashes (getField @"inputs" txbody) u
     certificates = toList (getField @"certs" txbody)
 
@@ -341,7 +336,8 @@ txinsScriptHashes ::
   Set (ScriptHash (Crypto era))
 txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
   where
-    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
+    -- to get subset, start with empty, and only insert those inputs in txInps
+    -- that are locked in u
     add input ans = case SplitMap.lookup input u of
       Just out -> case getField @"address" out of
         Addr _ (ScriptHashObj h) _ -> Set.insert h ans
