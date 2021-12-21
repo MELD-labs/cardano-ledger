@@ -50,7 +50,7 @@ import Cardano.Ledger.Era
     TranslationError,
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
+import Cardano.Ledger.Shelley.API.Validation (ShelleyEraCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -185,7 +185,7 @@ class
           . left ApplyTxError
           $ res
 
-instance PraosCrypto c => ApplyTx (ShelleyEra c)
+instance ShelleyEraCrypto c => ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
