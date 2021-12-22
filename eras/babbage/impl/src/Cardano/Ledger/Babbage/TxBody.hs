@@ -67,9 +67,8 @@ import Cardano.Binary
     ToCBOR (..),
     decodeBreakOr,
     decodeListLenOrIndef,
-    encodeListLen
+    encodeListLen,
   )
-
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
@@ -624,16 +623,17 @@ instance
           TxOutCompact
             <$> fromCBOR
             <*> decodeNonNegative
-      Just 3 -> fmap pure $
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
+      Just 3 ->
+        fmap pure $
+          TxOutCompactDH
+            <$> fromCBOR
+            <*> decodeNonNegative
+            <*> fromCBOR
       Just 4 -> do
         _ <- fromCBOR @Bool
-        a  <- fromCBOR
-        b  <- decodeNonNegative
-        c  <- fromCBOR
+        a <- fromCBOR
+        b <- decodeNonNegative
+        c <- fromCBOR
         pure $ TxOutCompactDatum a b <$> c
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
