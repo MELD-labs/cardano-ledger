@@ -884,3 +884,8 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
+
+instance (Era era) => HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
+  getField (TxOutCompact _ _) = SNothing
+  getField (TxOutCompactDatum _ _ d) = SJust d
+  getField (TxOutCompactDH _ _ _) = SNothing
