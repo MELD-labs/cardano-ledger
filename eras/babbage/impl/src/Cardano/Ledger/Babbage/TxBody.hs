@@ -848,6 +848,12 @@ instance (Crypto era ~ c) => HasField "collateral" (TxBody era) (Set (TxIn c)) w
 instance (Crypto era ~ c) => HasField "referenceInputs" (TxBody era) (Set (TxIn c)) where
   getField (TxBodyConstr (Memo m _)) = _referenceInputs m
 
+instance HasField "collateralReturn" (TxBody era) (StrictMaybe (TxOut era)) where
+  getField (TxBodyConstr (Memo m _)) = _collateralReturn m
+
+instance HasField "totalCollateral" (TxBody era) (Coin) where
+  getField (TxBodyConstr (Memo m _)) = _totalCollateral m
+
 instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
   getField (TxBodyConstr (Memo m _)) = Set.map policyID (policies (_mint m))
 
